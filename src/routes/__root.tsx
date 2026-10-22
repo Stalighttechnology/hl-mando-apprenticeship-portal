@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "HL Mando Apprenticeship Recruitment Portal | EduforCareer" },
+      { title: "HL Mando Apprenticeship Recruitment Portal | Official Admission 2026" },
       {
         name: "description",
         content:
@@ -89,14 +89,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "We are hiring Apprenticeship Trainees at HL Mando Anand India Pvt. Ltd. (Plant 1). Register online through EduforCareer.",
+          "We are hiring Apprenticeship Trainees at HL Mando Anand India Pvt. Ltd. (Plant 1). Register online with zero fees.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/ms-logo.jpg", type: "image/jpeg" },
+      { rel: "apple-touch-icon", href: "/ms-logo.jpg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

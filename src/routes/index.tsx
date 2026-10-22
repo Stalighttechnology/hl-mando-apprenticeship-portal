@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Home,
   Bus,
-  Search,
   ArrowRight,
   Printer,
   ChevronRight,
@@ -81,14 +80,6 @@ interface FormData {
 
 type FormErrors = Partial<Record<keyof FormData, string>>;
 
-interface StatusResult {
-  found: boolean;
-  referenceId: string;
-  fullName?: string;
-  qualification?: string;
-  status: string;
-  message: string;
-}
 
 const initialFormData: FormData = {
   fullName: "",
@@ -165,10 +156,6 @@ function RecruitmentPortal() {
     toast.success(`Attached resume: ${file.name}`);
   };
 
-  // Status check states
-  const [searchRef, setSearchRef] = useState("");
-  const [statusResult, setStatusResult] = useState<StatusResult | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
 
   // Computed age
   const age = formData.dateOfBirth ? calculateAge(formData.dateOfBirth) : null;
@@ -426,100 +413,10 @@ function RecruitmentPortal() {
     }
   };
 
-  const handleTrackStatus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchRef.trim()) return;
-
-    setIsSearching(true);
-    const query = searchRef.trim();
-
-    try {
-      let matchedRecord: { reference_id: string; full_name?: string; qualification?: string; status?: string } | null = null;
-      
-      const resPrimary = await (supabase.from("hl_mando_applications" as any) as any)
-        .select("reference_id, full_name, qualification, status")
-        .or(`reference_id.eq.${query},mobile.eq.${query}`)
-        .maybeSingle();
-
-      if (resPrimary.data) {
-        matchedRecord = resPrimary.data;
-      } else {
-        const resSingular = await (supabase.from("hl_mando_application" as any) as any)
-          .select("reference_id, full_name, qualification, status")
-          .or(`reference_id.eq.${query},mobile.eq.${query}`)
-          .maybeSingle();
-        if (resSingular.data) {
-          matchedRecord = resSingular.data;
-        } else {
-          const resFallback = await (supabase.from("applications" as any) as any)
-            .select("reference_id, full_name, qualification, status")
-            .or(`reference_id.eq.${query},mobile.eq.${query}`)
-            .maybeSingle();
-          if (resFallback.data) {
-            matchedRecord = resFallback.data;
-          }
-        }
-      }
-
-      if (matchedRecord) {
-        setStatusResult({
-          found: true,
-          referenceId: matchedRecord.reference_id,
-          fullName: matchedRecord.full_name ?? "",
-          qualification: matchedRecord.qualification ? matchedRecord.qualification.toUpperCase() : "",
-          status: (matchedRecord.status || "applied").replace(/_/g, " ").toUpperCase(),
-          message: "Application is active in the HL Mando Plant 1 recruitment system. Eligible candidates are contacted directly for batch interview reporting.",
-        });
-      } else if (submittedRef && query.toUpperCase() === submittedRef.toUpperCase()) {
-        setStatusResult({
-          found: true,
-          referenceId: submittedRef,
-          fullName: submittedData?.fullName ?? "",
-          qualification: submittedData?.qualification ? submittedData.qualification.toUpperCase() : "",
-          status: "Applied — Under Initial Screening",
-          message: "Your application is active and queued for document verification by the HR team at Plant 1.",
-        });
-      } else {
-        setStatusResult({
-          found: true,
-          referenceId: query.toUpperCase(),
-          status: "Under Review / Queued",
-          message:
-            "Application reference received. Candidates meeting the age (18-26) and qualification criteria are being scheduled for the upcoming batch interview.",
-        });
-      }
-    } catch {
-      setStatusResult({
-        found: true,
-        referenceId: query.toUpperCase(),
-        status: "Application Queued",
-        message: "Application is registered and queued for verification.",
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-yellow-400 selection:text-slate-950">
-      {/* Top Advisory Bar */}
-      <div className="bg-slate-950 text-slate-200 text-xs py-2 px-4 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="font-bold text-yellow-400 uppercase tracking-wider">100% Free Recruitment:</span>
-            <span>HL Mando Anand India &amp; EduforCareer strictly charge NO FEES at any stage.</span>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-slate-300">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Phone className="w-3.5 h-3.5 text-yellow-400" /> Helpline: +91 9108753999
-            </span>
-            <span className="hidden md:flex items-center gap-1.5 font-medium">
-              <Mail className="w-3.5 h-3.5 text-yellow-400" /> placements@eduforcareer.com
-            </span>
-          </div>
-        </div>
-      </div>
+
 
       {/* Main Clean Corporate Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
@@ -549,16 +446,16 @@ function RecruitmentPortal() {
 
       {/* Hero Section — Modern Corporate Career Hero with Handshake Meeting Background */}
       <section className="relative overflow-hidden border-b border-slate-200 bg-white">
-        {/* Background Image Container — Zoomed Out & Properly Framed */}
+        {/* Background Image Container — Modern Corporate Handshake Banner */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <img
-            src="/Modern%20Office%20Handshake%20Meeting.png"
-            alt="HL Mando Career Team Meeting"
-            className="w-full h-full object-cover object-[75%_center] sm:object-[80%_center] lg:object-right scale-90 sm:scale-[0.88] lg:scale-[0.85] xl:scale-[0.88] origin-right transition-transform"
+            src="/Modern%20Corporate%20Handshake%20Banner.png"
+            alt="HL Mando Apprenticeship Career Banner"
+            className="w-full h-full object-cover object-center lg:object-[center_top]"
           />
-          {/* Multi-stop light gradient: White on text side (left), smooth reveal of team & handshake (right) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/35 lg:from-white lg:via-white/80 lg:to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-white/40" />
+          {/* Subtle directional fade over the left text area to ensure high contrast text readability while showcasing the banner */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/70 to-transparent lg:from-white/80 lg:via-white/40 lg:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent" />
         </div>
 
         {/* Hero Top Content */}
@@ -607,167 +504,167 @@ function RecruitmentPortal() {
           </div>
         </div>
 
-        {/* 4 Feature Metric Cards — Exact Match to Reference Image */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* 4 Feature Metric Cards — Bloomfield Innovations Sharp-Edge & Animated Style */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14 -mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Monthly Stipend (Amber/Gold Theme) */}
-            <div className="group relative bg-gradient-to-b from-amber-50/90 via-white to-amber-100/40 rounded-3xl p-6 sm:p-7 border border-amber-200/90 shadow-lg shadow-amber-500/5 hover:shadow-2xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/30 group-hover:scale-105 transition-transform">
-                      <Wallet className="w-5 h-5" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                      MONTHLY STIPEND
-                    </span>
+            <div className="group relative bg-gradient-to-b from-[#FFFDF0] via-[#FFF9DC] to-[#FDF3B8] rounded-lg p-4 sm:p-5 border border-amber-300/80 shadow-md shadow-amber-500/10 hover:shadow-2xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between min-h-[185px] overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-amber-500">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-1.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <Wallet className="w-4 h-4 text-slate-900" />
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
-                    FIXED
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                    MONTHLY STIPEND
                   </span>
                 </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                  FIXED
+                </span>
+              </div>
 
-                {/* Big Number & Subtext */}
-                <div className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mt-5">
+              {/* Big Number & Subtext (Centered) */}
+              <div className="my-auto py-2.5 text-center">
+                <div className="text-2xl sm:text-[28px] font-black text-slate-950 tracking-tight leading-none group-hover:scale-105 transition-transform duration-300">
                   ₹21,500
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1.5">
                   Up to for BE / B.Tech
                 </p>
               </div>
 
               {/* Bottom Row */}
-              <div className="pt-5 mt-6 border-t border-amber-100 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Calendar className="w-4 h-4 text-amber-600" />
+              <div className="pt-2.5 border-t border-amber-200/70 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800">
+                  <Calendar className="w-3.5 h-3.5 text-amber-700" />
                   <span>Per Month</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs group-hover:translate-x-0.5 transition-transform">
-                  <ArrowRight className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-md bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs group-hover:translate-x-1.5 group-hover:bg-amber-300 transition-all duration-300">
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
             </div>
 
             {/* Card 2: Age Criteria (Cool Sky Blue Theme) */}
-            <div className="group relative bg-gradient-to-b from-blue-50/90 via-white to-blue-100/40 rounded-3xl p-6 sm:p-7 border border-blue-200/90 shadow-lg shadow-blue-500/5 hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                      AGE CRITERIA
-                    </span>
+            <div className="group relative bg-gradient-to-b from-white via-white to-[#EAF2FD] rounded-lg p-4 sm:p-5 border border-blue-200/80 shadow-md shadow-blue-500/10 hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between min-h-[185px] overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-blue-600">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-1.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <Users className="w-4 h-4" />
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    ELIGIBILITY
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                    AGE CRITERIA
                   </span>
                 </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  ELIGIBILITY
+                </span>
+              </div>
 
-                {/* Big Number & Subtext */}
-                <div className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mt-5">
-                  18 – 26 <span className="text-sm font-bold text-slate-500">Years</span>
+              {/* Big Number & Subtext (Centered) */}
+              <div className="my-auto py-2.5 text-center">
+                <div className="text-2xl sm:text-[28px] font-black text-slate-950 tracking-tight leading-none group-hover:scale-105 transition-transform duration-300">
+                  18 – 26 <span className="text-xs sm:text-sm font-semibold text-slate-600 ml-0.5">Years</span>
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1.5">
                   Male &amp; Female
                 </p>
               </div>
 
               {/* Bottom Row */}
-              <div className="pt-5 mt-6 border-t border-blue-100 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Users className="w-4 h-4 text-blue-600" />
+              <div className="pt-2.5 border-t border-blue-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>Male &amp; Female</span>
                 </div>
-                <span className="text-xs font-black text-blue-600">Both Eligible</span>
+                <span className="text-[11px] font-black text-blue-600 group-hover:translate-x-0.5 transition-transform">Both Eligible</span>
               </div>
             </div>
 
             {/* Card 3: Accepted Degrees (Purple/Lavender Theme) */}
-            <div className="group relative bg-gradient-to-b from-purple-50/90 via-white to-purple-100/40 rounded-3xl p-6 sm:p-7 border border-purple-200/90 shadow-lg shadow-purple-500/5 hover:shadow-2xl hover:border-purple-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-600/30 group-hover:scale-105 transition-transform">
-                      <GraduationCap className="w-5 h-5" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                      ACCEPTED DEGREES
-                    </span>
+            <div className="group relative bg-gradient-to-b from-white via-white to-[#F3EEFE] rounded-lg p-4 sm:p-5 border border-purple-200/80 shadow-md shadow-purple-500/10 hover:shadow-2xl hover:border-purple-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between min-h-[185px] overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-purple-600">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-1.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <GraduationCap className="w-4 h-4" />
                   </div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">
-                    STREAMS
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                    ACCEPTED DEGREES
                   </span>
                 </div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider bg-purple-200/80 text-purple-700 border border-purple-200">
+                  STREAMS
+                </span>
+              </div>
 
-                {/* Big Number & Subtext */}
-                <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-5">
+              {/* Big Number & Subtext (Centered) */}
+              <div className="my-auto py-2.5 text-center">
+                <div className="text-xl sm:text-[24px] font-black text-slate-950 tracking-tight leading-none group-hover:scale-105 transition-transform duration-300">
                   Diploma / BE
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1.5">
                   &amp; Any Degree
                 </p>
               </div>
 
               {/* Bottom Row */}
-              <div className="pt-5 mt-6 border-t border-purple-100 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <FileText className="w-4 h-4 text-purple-600" />
-                  <span>All Branches Acceptable</span>
+              <div className="pt-2.5 border-t border-purple-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 truncate mr-1">
+                  <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                  <span className="truncate">All Branches Acceptable</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-900 flex items-center justify-center font-bold shadow-xs group-hover:translate-x-0.5 transition-transform">
-                  <ArrowRight className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-md bg-purple-100 text-purple-700 flex items-center justify-center font-bold group-hover:translate-x-1.5 group-hover:bg-purple-200 transition-all duration-300 shrink-0">
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
             </div>
 
             {/* Card 4: Facilities (Mint/Emerald Theme) */}
-            <div className="group relative bg-gradient-to-b from-emerald-50/90 via-white to-emerald-100/40 rounded-3xl p-6 sm:p-7 border border-emerald-200/90 shadow-lg shadow-emerald-500/5 hover:shadow-2xl hover:border-emerald-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform">
-                      <Gift className="w-5 h-5" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                      FACILITIES
-                    </span>
+            <div className="group relative bg-gradient-to-b from-[#F2FBF7] via-[#E9F8F1] to-[#DDF5EB] rounded-lg p-4 sm:p-5 border border-emerald-200/80 shadow-md shadow-emerald-500/10 hover:shadow-2xl hover:border-emerald-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between min-h-[185px] overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-emerald-600">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-1.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <Gift className="w-4 h-4" />
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    COMPANY PAID
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                    FACILITIES
                   </span>
                 </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                  COMPANY PAID
+                </span>
+              </div>
 
-                {/* Big Number & Subtext */}
-                <div className="text-3xl sm:text-4xl font-black text-emerald-800 tracking-tight mt-5">
+              {/* Big Number & Subtext (Centered) */}
+              <div className="my-auto py-2.5 text-center">
+                <div className="text-2xl sm:text-[28px] font-black text-[#006644] tracking-tight leading-none group-hover:scale-105 transition-transform duration-300">
                   100% FREE
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1.5">
                   Stay, Food &amp; Bus
                 </p>
               </div>
 
               {/* Bottom Row — Accommodation, Food, Transportation */}
-              <div className="pt-5 mt-6 border-t border-emerald-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                  <Home className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Accommodation</span>
+              <div className="pt-2 border-t border-emerald-200/70 grid grid-cols-3 gap-1 items-center text-center">
+                <div className="flex flex-col items-center group-hover:-translate-y-0.5 transition-transform duration-200">
+                  <Home className="w-3.5 h-3.5 text-emerald-700 mb-0.5 shrink-0" />
+                  <span className="text-[9px] font-bold text-slate-700 leading-tight">Accommodation</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                  <UtensilsCrossed className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Food</span>
+                <div className="flex flex-col items-center border-x border-emerald-200/70 px-0.5 group-hover:-translate-y-0.5 transition-transform duration-200">
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-700 mb-0.5 shrink-0" />
+                  <span className="text-[9px] font-bold text-slate-700 leading-tight">Food</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                  <Bus className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Transportation</span>
+                <div className="flex flex-col items-center group-hover:-translate-y-0.5 transition-transform duration-200">
+                  <Bus className="w-3.5 h-3.5 text-emerald-700 mb-0.5 shrink-0" />
+                  <span className="text-[9px] font-bold text-slate-700 leading-tight">Transportation</span>
                 </div>
               </div>
             </div>
@@ -810,18 +707,20 @@ function RecruitmentPortal() {
             </div>
           </div>
 
-          {/* 4 Feature Cards Grid */}
+          {/* 4 Feature Cards Grid — Bloomfield Innovations Sharp-Edge & Animated Layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 1. Automated Robotic Lines */}
-            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-blue-300 transition-all duration-200 flex flex-col justify-between">
+            <div className="group bg-white rounded-lg p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-blue-600 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-950 flex items-center justify-center font-bold border border-blue-100 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 rounded-md bg-blue-50 text-blue-950 flex items-center justify-center font-bold border border-blue-100 group-hover:scale-110 group-hover:rotate-2 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                     <Building2 className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">01</span>
+                  <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs font-black flex items-center justify-center group-hover:bg-blue-950 group-hover:text-white group-hover:border-blue-950 transition-colors">
+                    01
+                  </div>
                 </div>
-                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-blue-950 transition-colors">
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-blue-900 transition-colors">
                   Automated Robotic Lines
                 </h3>
                 <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
@@ -829,24 +728,27 @@ function RecruitmentPortal() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200/80">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200/80">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                   Precision Robotics
                 </span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-300" />
               </div>
             </div>
 
             {/* 2. Complete Trainee Welfare */}
-            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between">
+            <div className="group bg-white rounded-lg p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-emerald-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-emerald-600 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-900 flex items-center justify-center font-bold border border-emerald-100 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 rounded-md bg-emerald-50 text-emerald-900 flex items-center justify-center font-bold border border-emerald-100 group-hover:scale-110 group-hover:rotate-2 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">02</span>
+                  <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs font-black flex items-center justify-center group-hover:bg-emerald-950 group-hover:text-white group-hover:border-emerald-950 transition-colors">
+                    02
+                  </div>
                 </div>
-                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-emerald-950 transition-colors">
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-emerald-900 transition-colors">
                   Complete Trainee Welfare
                 </h3>
                 <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
@@ -854,24 +756,27 @@ function RecruitmentPortal() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   100% Free Amenities
                 </span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all duration-300" />
               </div>
             </div>
 
             {/* 3. Govt. Recognized Certification */}
-            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-amber-300 transition-all duration-200 flex flex-col justify-between">
+            <div className="group bg-white rounded-lg p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-amber-500 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-900 flex items-center justify-center font-bold border border-amber-100 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 rounded-md bg-amber-50 text-amber-900 flex items-center justify-center font-bold border border-amber-100 group-hover:scale-110 group-hover:rotate-2 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all duration-300">
                     <Award className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">03</span>
+                  <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs font-black flex items-center justify-center group-hover:bg-amber-500 group-hover:text-slate-950 group-hover:border-amber-500 transition-colors">
+                    03
+                  </div>
                 </div>
-                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-amber-950 transition-colors">
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-amber-900 transition-colors">
                   Govt. Recognized Certification
                 </h3>
                 <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
@@ -879,24 +784,27 @@ function RecruitmentPortal() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-900 border border-amber-200/80">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200/80">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
                   NATS Certified
                 </span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all duration-300" />
               </div>
             </div>
 
             {/* 4. Direct Plant Onboarding */}
-            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-indigo-300 transition-all duration-200 flex flex-col justify-between">
+            <div className="group bg-white rounded-lg p-6 sm:p-7 border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-indigo-400 transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-indigo-600 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-950 flex items-center justify-center font-bold border border-indigo-100 group-hover:scale-105 transition-transform">
+                  <div className="w-12 h-12 rounded-md bg-indigo-50 text-indigo-950 flex items-center justify-center font-bold border border-indigo-100 group-hover:scale-110 group-hover:rotate-2 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
                     <Users className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">04</span>
+                  <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs font-black flex items-center justify-center group-hover:bg-indigo-950 group-hover:text-white group-hover:border-indigo-950 transition-colors">
+                    04
+                  </div>
                 </div>
-                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-indigo-950 transition-colors">
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-indigo-900 transition-colors">
                   Direct Plant Onboarding
                 </h3>
                 <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
@@ -904,11 +812,12 @@ function RecruitmentPortal() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-indigo-50 text-indigo-900 border border-indigo-200/80">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-bold bg-indigo-50 text-indigo-900 border border-indigo-200/80">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
                   Zero Fees / Direct
                 </span>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all duration-300" />
               </div>
             </div>
           </div>
@@ -932,8 +841,8 @@ function RecruitmentPortal() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {/* BE Package — Top Package */}
-            <div className="relative rounded-3xl border-2 border-yellow-400 bg-gradient-to-b from-yellow-50/50 via-white to-white p-7 shadow-lg hover:shadow-xl transition-all flex flex-col justify-between">
-              <div className="absolute -top-3.5 left-7 bg-yellow-400 text-slate-950 text-[11px] font-black px-4 py-1 rounded-full uppercase tracking-wider shadow-sm">
+            <div className="relative rounded-lg border-2 border-yellow-400 bg-gradient-to-b from-yellow-50/50 via-white to-white p-6 sm:p-7 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-yellow-400">
+              <div className="absolute top-3.5 right-6 bg-yellow-400 text-slate-950 text-[10px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
                 Top Package
               </div>
 
@@ -943,7 +852,7 @@ function RecruitmentPortal() {
                     <h3 className="font-black text-xl text-slate-950">Bachelor of Engineering</h3>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">BE / B.Tech (All Engineering Streams)</p>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-yellow-400/20 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-11 h-11 rounded-md bg-yellow-400/20 text-slate-950 flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
                     <GraduationCap className="w-6 h-6 text-slate-900" />
                   </div>
                 </div>
@@ -957,19 +866,19 @@ function RecruitmentPortal() {
 
                 <div className="space-y-2.5 border-t border-slate-200/90 pt-5 text-xs text-slate-700 font-medium">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Accommodation (Hostel)</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Food in Canteen</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Company Transportation</span>
@@ -981,7 +890,7 @@ function RecruitmentPortal() {
                 <a
                   href="#apply-form"
                   onClick={() => handleQualificationChange("be")}
-                  className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs text-center block transition-all shadow-sm shadow-yellow-400/20"
+                  className="w-full py-3.5 rounded-md bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs uppercase tracking-wider text-center block transition-all shadow-sm shadow-yellow-400/20 hover:scale-[1.02]"
                 >
                   Apply as BE Graduate →
                 </a>
@@ -989,14 +898,14 @@ function RecruitmentPortal() {
             </div>
 
             {/* Any Degree Package */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between">
+            <div className="group relative rounded-lg border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-blue-900 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-black text-xl text-slate-950">Any Degree</h3>
+                    <h3 className="font-black text-xl text-slate-950 group-hover:text-blue-900 transition-colors">Any Degree</h3>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">B.Sc, B.Com, B.A, BBA, BCA, etc.</p>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-11 h-11 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0 group-hover:bg-blue-900 group-hover:text-white transition-all duration-300">
                     <GraduationCap className="w-6 h-6" />
                   </div>
                 </div>
@@ -1010,19 +919,19 @@ function RecruitmentPortal() {
 
                 <div className="space-y-2.5 border-t border-slate-100 pt-5 text-xs text-slate-700 font-medium">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Accommodation (Hostel)</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Food in Canteen</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Company Transportation</span>
@@ -1034,7 +943,7 @@ function RecruitmentPortal() {
                 <a
                   href="#apply-form"
                   onClick={() => handleQualificationChange("any_degree")}
-                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center block transition-all shadow-xs"
+                  className="w-full py-3.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider text-center block transition-all shadow-xs hover:scale-[1.02]"
                 >
                   Apply as Degree Graduate →
                 </a>
@@ -1042,14 +951,14 @@ function RecruitmentPortal() {
             </div>
 
             {/* Diploma Package */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between">
+            <div className="group relative rounded-lg border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col justify-between overflow-hidden before:absolute before:top-0 before:left-0 before:w-0 group-hover:before:w-full before:h-1 before:bg-slate-700 before:transition-all before:duration-300 before:ease-out">
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-black text-xl text-slate-950">Diploma</h3>
+                    <h3 className="font-black text-xl text-slate-950 group-hover:text-slate-800 transition-colors">Diploma</h3>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">Mechanical, Automobile, EEE, ECE, etc.</p>
                   </div>
-                  <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-11 h-11 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0 group-hover:bg-slate-800 group-hover:text-white transition-all duration-300">
                     <GraduationCap className="w-6 h-6" />
                   </div>
                 </div>
@@ -1063,19 +972,19 @@ function RecruitmentPortal() {
 
                 <div className="space-y-2.5 border-t border-slate-100 pt-5 text-xs text-slate-700 font-medium">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Accommodation (Hostel)</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Food in Canteen</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-sm bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <span>Free Company Transportation</span>
@@ -1087,7 +996,7 @@ function RecruitmentPortal() {
                 <a
                   href="#apply-form"
                   onClick={() => handleQualificationChange("diploma")}
-                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center block transition-all shadow-xs"
+                  className="w-full py-3.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider text-center block transition-all shadow-xs hover:scale-[1.02]"
                 >
                   Apply as Diploma Trainee →
                 </a>
@@ -1101,8 +1010,8 @@ function RecruitmentPortal() {
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
-              <div className="w-13 h-13 rounded-2xl bg-amber-100/70 text-amber-800 flex items-center justify-center shrink-0 font-bold border border-amber-200/50">
+            <div className="rounded-lg bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+              <div className="w-12 h-12 rounded-md bg-amber-100/70 text-amber-800 flex items-center justify-center shrink-0 font-bold border border-amber-200/50">
                 <Home className="w-6 h-6" />
               </div>
               <div>
@@ -1113,8 +1022,8 @@ function RecruitmentPortal() {
               </div>
             </div>
 
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
-              <div className="w-13 h-13 rounded-2xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0 font-bold border border-emerald-200/50">
+            <div className="rounded-lg bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+              <div className="w-12 h-12 rounded-md bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0 font-bold border border-emerald-200/50">
                 <UtensilsCrossed className="w-6 h-6" />
               </div>
               <div>
@@ -1125,8 +1034,8 @@ function RecruitmentPortal() {
               </div>
             </div>
 
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
-              <div className="w-13 h-13 rounded-2xl bg-blue-100/70 text-blue-800 flex items-center justify-center shrink-0 font-bold border border-blue-200/50">
+            <div className="rounded-lg bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+              <div className="w-12 h-12 rounded-md bg-blue-100/70 text-blue-800 flex items-center justify-center shrink-0 font-bold border border-blue-200/50">
                 <Bus className="w-6 h-6" />
               </div>
               <div>
@@ -1138,8 +1047,8 @@ function RecruitmentPortal() {
             </div>
           </div>
 
-          {/* Plant Location Card */}
-          <div className="rounded-3xl bg-slate-900 text-white p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-xl">
+          {/* Plant Location Card — Bloomfield Sharp-Edge Architectural Design */}
+          <div className="relative rounded-lg bg-slate-900 text-white p-7 sm:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-xl border border-slate-800 overflow-hidden before:absolute before:top-0 before:left-0 before:h-1 before:w-full before:bg-yellow-400">
             <div className="space-y-2 max-w-2xl">
               <div className="inline-flex items-center gap-1.5 text-xs text-yellow-400 font-bold uppercase tracking-wider">
                 <MapPin className="w-4 h-4" /> Work Location
@@ -1155,7 +1064,7 @@ function RecruitmentPortal() {
                 href="https://maps.google.com/?q=HL+Mando+Anand+India+Plant+1+SIPCOT+Industrial+Park+Sriperumbudur"
                 target="_blank"
                 rel="noreferrer"
-                className="px-5 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 text-xs font-black inline-flex items-center gap-2 transition-colors"
+                className="px-5 py-3 rounded-md bg-yellow-400 hover:bg-yellow-300 text-slate-950 text-xs font-black uppercase tracking-wider inline-flex items-center gap-2 transition-all hover:scale-105"
               >
                 <Globe className="w-4 h-4" /> Open in Google Maps
               </a>
@@ -1167,7 +1076,7 @@ function RecruitmentPortal() {
                   );
                   toast.success("Plant address copied to clipboard!");
                 }}
-                className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors"
+                className="px-4 py-3 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider transition-all"
               >
                 Copy Address
               </button>
@@ -1176,51 +1085,6 @@ function RecruitmentPortal() {
         </div>
       </section>
 
-      {/* Application Status Tracker */}
-      <section id="track-status" className="py-12 bg-white border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="bg-slate-50 rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold">
-                <Search className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-lg text-slate-900">Check Your Application Status</h3>
-                <p className="text-xs text-slate-500">Enter your Reference ID (e.g. HLM26-10001) or 10-digit mobile number</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleTrackStatus} className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                placeholder="e.g. HLM26-10001 or 9876543210"
-                value={searchRef}
-                onChange={(e) => setSearchRef(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
-              />
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="px-6 py-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm transition-colors disabled:opacity-50"
-              >
-                {isSearching ? "Searching..." : "Track Status"}
-              </button>
-            </form>
-
-            {statusResult && (
-              <div className="mt-6 p-4 rounded-2xl bg-white border border-blue-200 shadow-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-blue-900">Ref: {statusResult.referenceId}</span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-xs font-bold uppercase">
-                    {statusResult.status}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">{statusResult.message}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Online Candidate Registration Form */}
       <section id="apply-form" className="py-16 bg-slate-50">
@@ -1800,12 +1664,12 @@ function RecruitmentPortal() {
       {/* Corporate Footer */}
       <footer className="bg-slate-950 text-slate-400 text-xs py-12 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="space-y-3">
               <img
                 src="/ms-logo.jpg"
                 alt="HL Mando"
-                className="h-10 w-auto object-contain bg-white px-2 py-1 rounded-lg"
+                className="h-10 w-auto object-contain bg-white px-2 py-1 rounded-md"
               />
               <p className="text-xs text-slate-400 leading-relaxed">
                 Global automotive tier-1 leader manufacturing next-generation steering, suspension, and braking systems.
@@ -1820,17 +1684,6 @@ function RecruitmentPortal() {
             </div>
 
             <div>
-              <h5 className="font-bold text-white mb-2 text-sm">Recruitment Partner</h5>
-              <div className="space-y-1 text-slate-400">
-                <div className="font-bold text-yellow-400">EduforCareer</div>
-                <div>Growth Beyond Limit</div>
-                <div>Web: <a href="https://www.eduforcareer.com" target="_blank" rel="noreferrer" className="underline hover:text-white">www.eduforcareer.com</a></div>
-                <div>Email: placements@eduforcareer.com</div>
-                <div>Helpline: +91 9108753999</div>
-              </div>
-            </div>
-
-            <div>
               <h5 className="font-bold text-white mb-2 text-sm">Zero Fee Compliance</h5>
               <p className="leading-relaxed text-slate-400">
                 Authorized apprenticeship program under Apprenticeship Act 1961. No recruitment fees or registration charges are ever collected.
@@ -1839,7 +1692,7 @@ function RecruitmentPortal() {
           </div>
 
           <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
-            <div>© {new Date().getFullYear()} HL Mando Anand India Private Limited &amp; EduforCareer. All rights reserved.</div>
+            <div>© {new Date().getFullYear()} HL Mando Anand India Private Limited. All rights reserved.</div>
           </div>
         </div>
       </footer>

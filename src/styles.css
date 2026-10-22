@@ -183,3 +183,16 @@
     @apply text-sm font-semibold text-foreground;
   }
 }
+
+/* Suppress any Lovable badge or watermark */
+#lovable-badge,
+.lovable-badge,
+[data-lovable],
+[aria-label*="Lovable" i],
+a[href*="lovable.dev" i] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
