@@ -47,20 +47,19 @@ function createSupabaseFetch(supabaseUrl: string, supabaseKey: string): typeof f
 
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL'];
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
+  // Active Supabase Project for HL Mando Apprenticeship
+  const ACTIVE_PROJECT_URL = "https://wgtzcjsajncrvibtlhxv.supabase.co";
+  const ACTIVE_PUBLISHABLE_KEY = "sb_publishable_ipyAcrU1KLwKoS20uWRBdA_iMVuIWtx";
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
-  }
+  const SUPABASE_URL =
+    (import.meta.env['VITE_SUPABASE_URL']?.includes("wgtzcjsajncrvibtlhxv") ? import.meta.env['VITE_SUPABASE_URL'] : null) ||
+    process.env['SUPABASE_URL'] ||
+    ACTIVE_PROJECT_URL;
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    (import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY']?.includes("ipyAcrU1KLwKoS20uWRBdA") ? import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] : null) ||
+    process.env['SUPABASE_PUBLISHABLE_KEY'] ||
+    ACTIVE_PUBLISHABLE_KEY;
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {

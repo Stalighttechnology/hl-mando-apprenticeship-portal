@@ -26,6 +26,10 @@ import {
   Award,
   Users,
   Upload,
+  Wallet,
+  Calendar,
+  FileText,
+  Gift,
 } from "lucide-react";
 import { QUALIFICATION_LABELS, SALARY_BY_QUALIFICATION } from "@/lib/recruitment";
 import {
@@ -113,8 +117,8 @@ const initialFormData: FormData = {
   declarationAccuracy: false,
   declarationEligibility: false,
   declarationNoFee: false,
-  consentDataProcessing: false,
-  privacyNoticeAccepted: false,
+  consentDataProcessing: true,
+  privacyNoticeAccepted: true,
 };
 
 function RecruitmentPortal() {
@@ -130,6 +134,10 @@ function RecruitmentPortal() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [certificateError, setCertificateError] = useState<string | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
+
+  const handleQualificationChange = (qual: Qualification) => {
+    setFormData((prev) => ({ ...prev, qualification: qual }));
+  };
 
   const handleCertificateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -260,8 +268,6 @@ function RecruitmentPortal() {
     if (!formData.declarationAccuracy) errs["declarationAccuracy"] = "Required";
     if (!formData.declarationEligibility) errs["declarationEligibility"] = "Required";
     if (!formData.declarationNoFee) errs["declarationNoFee"] = "Required";
-    if (!formData.consentDataProcessing) errs["consentDataProcessing"] = "Required";
-    if (!formData.privacyNoticeAccepted) errs["privacyNoticeAccepted"] = "Required";
 
     setErrors(errs);
     const keys = Object.keys(errs) as (keyof FormData)[];
@@ -541,242 +547,550 @@ function RecruitmentPortal() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white py-14 lg:py-20 border-b border-slate-800">
-        <div className="absolute inset-0 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px] opacity-10" />
+      {/* Hero Section — Modern Corporate Career Hero with Handshake Meeting Background */}
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white">
+        {/* Background Image Container — Zoomed Out & Properly Framed */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <img
+            src="/Modern%20Office%20Handshake%20Meeting.png"
+            alt="HL Mando Career Team Meeting"
+            className="w-full h-full object-cover object-[75%_center] sm:object-[80%_center] lg:object-right scale-90 sm:scale-[0.88] lg:scale-[0.85] xl:scale-[0.88] origin-right transition-transform"
+          />
+          {/* Multi-stop light gradient: White on text side (left), smooth reveal of team & handshake (right) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/35 lg:from-white lg:via-white/80 lg:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-white/40" />
+        </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Left Column: Headlines & Key Metrics */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-bold tracking-wide">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>OFFICIAL APPRENTICESHIP ADMISSION 2026</span>
+        {/* Hero Top Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-10 sm:pt-16 sm:pb-14">
+          <div className="max-w-2xl lg:max-w-xl space-y-5">
+            {/* Company & Core Typography */}
+            <div className="space-y-2">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500">
+                HL MANDO ANAND INDIA PRIVATE LIMITED (PLANT 1)
               </div>
-
-              <div className="space-y-2">
-                <div className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-400">
-                  HL MANDO ANAND INDIA PRIVATE LIMITED (PLANT 1)
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-slate-950">
+                WE ARE HIRING — <br />
+                <span className="text-blue-950">APPRENTICESHIP</span>{" "}
+                <span className="text-amber-500">TRAINEE</span>
+              </h1>
+              <div className="pt-1">
+                <div className="inline-flex items-center gap-3 text-xs sm:text-sm text-slate-800 font-black uppercase tracking-widest bg-white/95 backdrop-blur-sm px-4 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <span>Learn</span>
+                  <span className="text-amber-500 font-black">•</span>
+                  <span>Grow</span>
+                  <span className="text-amber-500 font-black">•</span>
+                  <span>Build Your Tomorrow</span>
                 </div>
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-                  WE ARE HIRING — <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-400">
-                    APPRENTICESHIP
-                  </span>{" "}
-                  <span className="text-white">TRAINEE</span>
-                </h1>
-                <p className="text-xs sm:text-sm text-yellow-400/90 font-bold uppercase tracking-widest pt-1">
-                  Learn | Grow | Build Your Tomorrow
+              </div>
+            </div>
+
+            {/* Lead Paragraph */}
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal bg-white/85 backdrop-blur-xs p-3.5 rounded-2xl border border-white/80 shadow-2xs">
+              Start your automotive manufacturing career at <strong className="text-slate-900 font-bold">HL Mando Anand India (Plant 1)</strong>, Sriperumbudur, Chennai. 
+              Get practical hands-on technical training on advanced robotic production lines with approved monthly stipends and full living amenities.
+            </p>
+
+            {/* Action Buttons — Pill with White Circular Arrow matching reference image */}
+            <div className="pt-2">
+              <a
+                href="#apply-form"
+                className="inline-flex items-center gap-3.5 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 hover:from-blue-900 hover:to-blue-700 text-white font-black text-sm sm:text-base px-7 sm:px-8 py-3.5 sm:py-4 rounded-full shadow-xl shadow-blue-950/30 border border-blue-500/40 hover:scale-[1.02] transition-all group"
+              >
+                <span>Register Application Now</span>
+                <span className="text-yellow-400 font-bold">&gt;</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-blue-950 flex items-center justify-center font-black shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Feature Metric Cards — Exact Match to Reference Image */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Card 1: Monthly Stipend (Amber/Gold Theme) */}
+            <div className="group relative bg-gradient-to-b from-amber-50/90 via-white to-amber-100/40 rounded-3xl p-6 sm:p-7 border border-amber-200/90 shadow-lg shadow-amber-500/5 hover:shadow-2xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
+              <div>
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/30 group-hover:scale-105 transition-transform">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                      MONTHLY STIPEND
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                    FIXED
+                  </span>
+                </div>
+
+                {/* Big Number & Subtext */}
+                <div className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mt-5">
+                  ₹21,500
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-1">
+                  Up to for BE / B.Tech
                 </p>
               </div>
 
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
-                Start your automotive manufacturing career at <strong>HL Mando Anand India (Plant 1)</strong>, Sriperumbudur, Chennai. 
-                Get practical hands-on technical training on advanced robotic production lines with approved monthly stipends and full living amenities.
-              </p>
-
-              {/* Metric Badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                <div className="rounded-2xl border border-yellow-400/40 bg-slate-900/90 p-4 shadow-lg">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Monthly Stipend</div>
-                  <div className="text-2xl font-black text-yellow-400">₹21,500</div>
-                  <div className="text-[11px] text-slate-400 font-medium">Up to for BE / B.Tech</div>
+              {/* Bottom Row */}
+              <div className="pt-5 mt-6 border-t border-amber-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <Calendar className="w-4 h-4 text-amber-600" />
+                  <span>Per Month</span>
                 </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-lg">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Age Criteria</div>
-                  <div className="text-2xl font-black text-white">18 – 26</div>
-                  <div className="text-[11px] text-slate-400 font-medium">Male &amp; Female</div>
+                <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ArrowRight className="w-4 h-4" />
                 </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-lg">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Accepted Degrees</div>
-                  <div className="text-xl font-black text-white">Diploma / BE</div>
-                  <div className="text-[11px] text-slate-400 font-medium">&amp; Any Degree</div>
-                </div>
-
-                <div className="rounded-2xl border border-emerald-500/40 bg-slate-900/90 p-4 shadow-lg">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase">Facilities</div>
-                  <div className="text-2xl font-black text-emerald-400">100% FREE</div>
-                  <div className="text-[11px] text-slate-400 font-medium">Stay, Food &amp; Bus</div>
-                </div>
-              </div>
-
-              {/* Hero Action Buttons */}
-              <div className="flex flex-wrap items-center gap-4 pt-3">
-                <a
-                  href="#apply-form"
-                  className="px-7 py-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-sm tracking-wide shadow-xl shadow-yellow-400/20 inline-flex items-center gap-2 transition-all transform hover:-translate-y-0.5"
-                >
-                  Register Application Now <ChevronRight className="w-4 h-4" />
-                </a>
-
-                <a
-                  href="/recruitment-poster.jpg"
-                  download="HL-Mando-Apprenticeship-Poster-2026.jpg"
-                  className="px-5 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs inline-flex items-center gap-2 border border-slate-700 transition-colors"
-                >
-                  <Download className="w-4 h-4 text-yellow-400" /> Download Official Poster
-                </a>
               </div>
             </div>
 
-            {/* Right Column: Poster Card Showcase */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative group w-full max-w-sm sm:max-w-md">
-                <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-yellow-400 to-amber-500 opacity-20 blur-xl group-hover:opacity-40 transition duration-500" />
-                
-                <div className="relative rounded-2xl overflow-hidden border-2 border-yellow-400 shadow-2xl bg-slate-950">
-                  <img
-                    src="/recruitment-poster.jpg"
-                    alt="HL Mando Apprenticeship Trainee Recruitment Poster"
-                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
-                    onClick={() => setIsPosterModalOpen(true)}
-                  />
-
-                  {/* Poster Action Bar */}
-                  <div className="p-3.5 bg-slate-950/95 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-extrabold text-white flex items-center gap-1.5">
-                        <FileCheck2 className="w-4 h-4 text-yellow-400" /> Official Recruitment Poster
-                      </div>
-                      <div className="text-[11px] text-slate-400">Sriperumbudur (Plant 1)</div>
+            {/* Card 2: Age Criteria (Cool Sky Blue Theme) */}
+            <div className="group relative bg-gradient-to-b from-blue-50/90 via-white to-blue-100/40 rounded-3xl p-6 sm:p-7 border border-blue-200/90 shadow-lg shadow-blue-500/5 hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
+              <div>
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform">
+                      <Users className="w-5 h-5" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsPosterModalOpen(true)}
-                        className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors"
-                        title="Enlarge poster"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <a
-                        href="/recruitment-poster.jpg"
-                        download="HL-Mando-Recruitment-Poster-2026.jpg"
-                        className="p-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-slate-950 transition-colors"
-                        title="Download poster"
-                      >
-                        <Download className="w-4 h-4" />
-                      </a>
-                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                      AGE CRITERIA
+                    </span>
                   </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    ELIGIBILITY
+                  </span>
+                </div>
+
+                {/* Big Number & Subtext */}
+                <div className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mt-5">
+                  18 – 26 <span className="text-sm font-bold text-slate-500">Years</span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-1">
+                  Male &amp; Female
+                </p>
+              </div>
+
+              {/* Bottom Row */}
+              <div className="pt-5 mt-6 border-t border-blue-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span>Male &amp; Female</span>
+                </div>
+                <span className="text-xs font-black text-blue-600">Both Eligible</span>
+              </div>
+            </div>
+
+            {/* Card 3: Accepted Degrees (Purple/Lavender Theme) */}
+            <div className="group relative bg-gradient-to-b from-purple-50/90 via-white to-purple-100/40 rounded-3xl p-6 sm:p-7 border border-purple-200/90 shadow-lg shadow-purple-500/5 hover:shadow-2xl hover:border-purple-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
+              <div>
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-600/30 group-hover:scale-105 transition-transform">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                      ACCEPTED DEGREES
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">
+                    STREAMS
+                  </span>
+                </div>
+
+                {/* Big Number & Subtext */}
+                <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-5">
+                  Diploma / BE
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-1">
+                  &amp; Any Degree
+                </p>
+              </div>
+
+              {/* Bottom Row */}
+              <div className="pt-5 mt-6 border-t border-purple-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  <span>All Branches Acceptable</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-900 flex items-center justify-center font-bold shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ArrowRight className="w-4 h-4" />
                 </div>
               </div>
             </div>
 
+            {/* Card 4: Facilities (Mint/Emerald Theme) */}
+            <div className="group relative bg-gradient-to-b from-emerald-50/90 via-white to-emerald-100/40 rounded-3xl p-6 sm:p-7 border border-emerald-200/90 shadow-lg shadow-emerald-500/5 hover:shadow-2xl hover:border-emerald-400 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
+              <div>
+                {/* Header Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform">
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                      FACILITIES
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    COMPANY PAID
+                  </span>
+                </div>
+
+                {/* Big Number & Subtext */}
+                <div className="text-3xl sm:text-4xl font-black text-emerald-800 tracking-tight mt-5">
+                  100% FREE
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-1">
+                  Stay, Food &amp; Bus
+                </p>
+              </div>
+
+              {/* Bottom Row — Accommodation, Food, Transportation */}
+              <div className="pt-5 mt-6 border-t border-emerald-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <Home className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Accommodation</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <UtensilsCrossed className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Food</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                  <Bus className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Transportation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Dedicated Section: Plant 1 Highlights — Technical Operations & Welfare Overview */}
+      <section className="py-16 sm:py-20 bg-slate-50/60 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          {/* Header Row */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-950 text-xs font-black uppercase tracking-wider mb-3 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-blue-700" />
+                Plant 1 Highlights • Drive 2026
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">
+                Automotive Systems Manufacturing Training
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 font-medium mt-1.5">
+                Sriperumbudur Industrial Corridor, Chennai
+              </p>
+            </div>
+
+            {/* Plant 1 Location Badge */}
+            <div className="inline-flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xs self-start lg:self-auto">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0 border border-blue-100">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Plant Location</div>
+                <div className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
+                  <span>SIPCOT Industrial Park, Sriperumbudur</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-blue-950 text-white px-2 py-0.5 rounded-md">
+                    Plant 1
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Feature Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 1. Automated Robotic Lines */}
+            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-blue-300 transition-all duration-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-950 flex items-center justify-center font-bold border border-blue-100 group-hover:scale-105 transition-transform">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">01</span>
+                </div>
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-blue-950 transition-colors">
+                  Automated Robotic Lines
+                </h3>
+                <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
+                  Hands-on training in Steering, Brake Calipers, Suspension, and precision assembly lines.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  Precision Robotics
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Complete Trainee Welfare */}
+            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-900 flex items-center justify-center font-bold border border-emerald-100 group-hover:scale-105 transition-transform">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">02</span>
+                </div>
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-emerald-950 transition-colors">
+                  Complete Trainee Welfare
+                </h3>
+                <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
+                  Free company-managed hostel accommodation, nutritious food, and plant transportation.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                  100% Free Amenities
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Govt. Recognized Certification */}
+            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-amber-300 transition-all duration-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-900 flex items-center justify-center font-bold border border-amber-100 group-hover:scale-105 transition-transform">
+                    <Award className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">03</span>
+                </div>
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-amber-950 transition-colors">
+                  Govt. Recognized Certification
+                </h3>
+                <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
+                  National Apprenticeship Training Scheme (NATS) certification upon successful completion.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-900 border border-amber-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                  NATS Certified
+                </span>
+              </div>
+            </div>
+
+            {/* 4. Direct Plant Onboarding */}
+            <div className="group bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:shadow-lg hover:border-indigo-300 transition-all duration-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-950 flex items-center justify-center font-bold border border-indigo-100 group-hover:scale-105 transition-transform">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">04</span>
+                </div>
+                <h3 className="font-black text-slate-950 text-lg tracking-tight group-hover:text-indigo-950 transition-colors">
+                  Direct Plant Onboarding
+                </h3>
+                <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2.5 font-normal">
+                  100% Free registration with zero placement charges at any stage of recruitment.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-indigo-50 text-indigo-900 border border-indigo-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                  Zero Fees / Direct
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Salary & Stipend Breakdown Cards */}
-      <section id="salary-packages" className="py-16 bg-white border-b border-slate-200">
+      <section id="salary-packages" className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-200">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-xs font-black uppercase tracking-widest text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-200 shadow-2xs">
               Clear Monthly Compensation
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-4">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-950 mt-4 tracking-tight">
               Monthly Stipend by Qualification
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-2">
+            <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium">
               Monthly stipend rates authorized for the 2026 Apprenticeship Batch at HL Mando Anand India (Plant 1):
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* BE Package */}
-            <div className="relative rounded-2xl border-2 border-yellow-400 bg-gradient-to-b from-yellow-50/40 via-white to-white p-6 shadow-md hover:shadow-xl transition-all">
-              <div className="absolute -top-3 left-6 bg-yellow-400 text-slate-950 text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            {/* BE Package — Top Package */}
+            <div className="relative rounded-3xl border-2 border-yellow-400 bg-gradient-to-b from-yellow-50/50 via-white to-white p-7 shadow-lg hover:shadow-xl transition-all flex flex-col justify-between">
+              <div className="absolute -top-3.5 left-7 bg-yellow-400 text-slate-950 text-[11px] font-black px-4 py-1 rounded-full uppercase tracking-wider shadow-sm">
                 Top Package
               </div>
 
-              <div className="flex items-center justify-between mt-2">
-                <div>
-                  <h3 className="font-extrabold text-lg text-slate-900">Bachelor of Engineering</h3>
-                  <p className="text-xs text-slate-500 font-medium">BE / B.Tech (All Engineering Streams)</p>
+              <div>
+                <div className="flex items-start justify-between mt-2">
+                  <div>
+                    <h3 className="font-black text-xl text-slate-950">Bachelor of Engineering</h3>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">BE / B.Tech (All Engineering Streams)</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-yellow-400/20 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                    <GraduationCap className="w-6 h-6 text-slate-900" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-yellow-400/20 text-slate-950 flex items-center justify-center font-bold">
-                  <GraduationCap className="w-5 h-5 text-slate-900" />
+
+                <div className="my-6">
+                  <div className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight">
+                    ₹21,500<span className="text-lg font-bold text-slate-400">/-</span>
+                  </div>
+                  <div className="text-xs text-amber-700 font-bold mt-1">Fixed Approved Monthly Stipend</div>
+                </div>
+
+                <div className="space-y-2.5 border-t border-slate-200/90 pt-5 text-xs text-slate-700 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Accommodation (Hostel)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Food in Canteen</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Company Transportation</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="my-6">
-                <div className="text-4xl font-black text-slate-900">₹21,500/-</div>
-                <div className="text-xs text-slate-500 font-semibold mt-0.5">Fixed Monthly Stipend</div>
-              </div>
-
-              <div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-700">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Accommodation (Hostel)
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Food in Canteen
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Company Transportation
-                </div>
+              <div className="pt-6 mt-6 border-t border-slate-100">
+                <a
+                  href="#apply-form"
+                  onClick={() => handleQualificationChange("be")}
+                  className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs text-center block transition-all shadow-sm shadow-yellow-400/20"
+                >
+                  Apply as BE Graduate →
+                </a>
               </div>
             </div>
 
             {/* Any Degree Package */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-lg text-slate-900">Any Degree</h3>
-                  <p className="text-xs text-slate-500 font-medium">B.Sc, B.Com, B.A, BBA, BCA, etc.</p>
+            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-black text-xl text-slate-950">Any Degree</h3>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">B.Sc, B.Com, B.A, BBA, BCA, etc.</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-                  <GraduationCap className="w-5 h-5" />
+
+                <div className="my-6">
+                  <div className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight">
+                    ₹19,250<span className="text-lg font-bold text-slate-400">/-</span>
+                  </div>
+                  <div className="text-xs text-slate-500 font-bold mt-1">Fixed Approved Monthly Stipend</div>
+                </div>
+
+                <div className="space-y-2.5 border-t border-slate-100 pt-5 text-xs text-slate-700 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Accommodation (Hostel)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Food in Canteen</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Company Transportation</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="my-6">
-                <div className="text-4xl font-black text-slate-900">₹19,250/-</div>
-                <div className="text-xs text-slate-500 font-semibold mt-0.5">Fixed Monthly Stipend</div>
-              </div>
-
-              <div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-700">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Accommodation (Hostel)
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Food in Canteen
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Company Transportation
-                </div>
+              <div className="pt-6 mt-6 border-t border-slate-100">
+                <a
+                  href="#apply-form"
+                  onClick={() => handleQualificationChange("any_degree")}
+                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center block transition-all shadow-xs"
+                >
+                  Apply as Degree Graduate →
+                </a>
               </div>
             </div>
 
             {/* Diploma Package */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-lg text-slate-900">Diploma</h3>
-                  <p className="text-xs text-slate-500 font-medium">Mechanical, Automobile, EEE, ECE, etc.</p>
+            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-black text-xl text-slate-950">Diploma</h3>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Mechanical, Automobile, EEE, ECE, etc.</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-                  <GraduationCap className="w-5 h-5" />
+
+                <div className="my-6">
+                  <div className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight">
+                    ₹17,500<span className="text-lg font-bold text-slate-400">/-</span>
+                  </div>
+                  <div className="text-xs text-slate-500 font-bold mt-1">Fixed Approved Monthly Stipend</div>
+                </div>
+
+                <div className="space-y-2.5 border-t border-slate-100 pt-5 text-xs text-slate-700 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Accommodation (Hostel)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Food in Canteen</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Free Company Transportation</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="my-6">
-                <div className="text-4xl font-black text-slate-900">₹17,500/-</div>
-                <div className="text-xs text-slate-500 font-semibold mt-0.5">Fixed Monthly Stipend</div>
-              </div>
-
-              <div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-700">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Accommodation (Hostel)
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Food in Canteen
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" /> Free Company Transportation
-                </div>
+              <div className="pt-6 mt-6 border-t border-slate-100">
+                <a
+                  href="#apply-form"
+                  onClick={() => handleQualificationChange("diploma")}
+                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center block transition-all shadow-xs"
+                >
+                  Apply as Diploma Trainee →
+                </a>
               </div>
             </div>
           </div>
@@ -787,36 +1101,36 @@ function RecruitmentPortal() {
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="rounded-2xl bg-white border border-slate-200 p-6 flex items-start gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
+              <div className="w-13 h-13 rounded-2xl bg-amber-100/70 text-amber-800 flex items-center justify-center shrink-0 font-bold border border-amber-200/50">
                 <Home className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">Free Accommodation</h4>
+                <h4 className="font-black text-slate-900 text-base">Free Accommodation</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   Clean, furnished hostel accommodation with 24/7 security, purified water, and hygienic facilities provided at zero cost.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white border border-slate-200 p-6 flex items-start gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
+              <div className="w-13 h-13 rounded-2xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0 font-bold border border-emerald-200/50">
                 <UtensilsCrossed className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">Free Food &amp; Canteen</h4>
+                <h4 className="font-black text-slate-900 text-base">Free Food &amp; Canteen</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   Wholesome, hot and hygienic meals and shift refreshments served at the plant canteen with zero salary deduction.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white border border-slate-200 p-6 flex items-start gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 flex items-start gap-4 shadow-xs hover:shadow-sm transition-all">
+              <div className="w-13 h-13 rounded-2xl bg-blue-100/70 text-blue-800 flex items-center justify-center shrink-0 font-bold border border-blue-200/50">
                 <Bus className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">Free Transportation</h4>
+                <h4 className="font-black text-slate-900 text-base">Free Transportation</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   Complimentary company buses covering major pick-up routes across Sriperumbudur, Kanchipuram, and Chennai.
                 </p>
@@ -1422,30 +1736,6 @@ function RecruitmentPortal() {
                           <strong>Zero Fees Acknowledgement:</strong> I understand that EduforCareer and HL Mando Anand India strictly charge NO FEES for apprenticeship recruitment.
                         </span>
                       </label>
-
-                      <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.consentDataProcessing}
-                          onChange={(e) => handleChange("consentDataProcessing", e.target.checked)}
-                          className="mt-0.5 rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>
-                          <strong>Data Processing Consent:</strong> I consent to processing my information strictly for the apprenticeship selection process.
-                        </span>
-                      </label>
-
-                      <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.privacyNoticeAccepted}
-                          onChange={(e) => handleChange("privacyNoticeAccepted", e.target.checked)}
-                          className="mt-0.5 rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>
-                          <strong>Privacy Notice:</strong> I agree to the recruitment privacy policy terms.
-                        </span>
-                      </label>
                     </div>
                   </div>
                 </div>
@@ -1550,11 +1840,6 @@ function RecruitmentPortal() {
 
           <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
             <div>© {new Date().getFullYear()} HL Mando Anand India Private Limited &amp; EduforCareer. All rights reserved.</div>
-            <div className="flex gap-4">
-              <span>Plant 1, Sriperumbudur</span>
-              <span>•</span>
-              <span>Batch 2026</span>
-            </div>
           </div>
         </div>
       </footer>

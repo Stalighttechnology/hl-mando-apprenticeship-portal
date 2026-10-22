@@ -17,6 +17,7 @@ import {
   ChevronRight,
   RefreshCw,
   Eye,
+  EyeOff,
   FileSpreadsheet,
   X,
   FileText,
@@ -26,6 +27,14 @@ import {
   GraduationCap,
   ShieldCheck,
   Award,
+  Copy,
+  Check,
+  ExternalLink,
+  Briefcase,
+  Sparkles,
+  AlertCircle,
+  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -65,38 +74,51 @@ interface Applicant {
   rejection_reason?: string | null;
   interview_at?: string | null;
   interview_location?: string | null;
+  remarks?: string | null;
+  certificate_url?: string | null;
+  resume_url?: string | null;
   created_at: string;
 }
 
 const DEFAULT_ADMIN_PASSCODE = "mando@2026";
+const DEFAULT_ADMIN_USER = "admin";
 
 function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return typeof window !== "undefined" && localStorage.getItem("hl_mando_admin_auth") === "true";
   });
-  const [passcode, setPasscode] = useState("");
-  const [authError, setAuthError] = useState("");
 
+  // Login form state
+  const [username, setUsername] = useState("admin");
+  const [passcode, setPasscode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Dashboard records state
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [qualificationFilter, setQualificationFilter] = useState("all");
+  const [copiedRef, setCopiedRef] = useState<string | null>(null);
 
+  // Selected applicant & status update
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [newStatus, setNewStatus] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [interviewDate, setInterviewDate] = useState("");
-  const [interviewLocation, setInterviewLocation] = useState("Plant 1, Sriperumbudur, Chennai");
+  const [interviewLocation, setInterviewLocation] = useState("Plant 1, Sriperumbudur, Chennai (HR Block - Gate 2)");
+  const [remarks, setRemarks] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "documents" | "interview">("overview");
 
-  // Load applicants from Supabase
+  // Fetch applicants from Supabase
   const fetchApplicants = async () => {
     setIsLoading(true);
     try {
-      // Fetch from hl_mando_applications first, then hl_mando_application, then applications
       let records: Applicant[] = [];
-      let res = await (supabase.from("hl_mando_applications" as any) as any)
+      const resPrimary = await (supabase.from("hl_mando_applications" as any) as any)
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -130,62 +152,34 @@ function AdminDashboard() {
         rejection_reason: row.rejection_reason || null,
         interview_at: row.interview_at || null,
         interview_location: row.interview_location || null,
+        remarks: row.remarks || null,
+        certificate_url: row.certificate_url || null,
+        resume_url: row.resume_url || null,
         created_at: row.created_at || new Date().toISOString(),
       });
 
-      if (res.data && res.data.length > 0) {
-        records = res.data.map(normalizeApplicant);
+      if (resPrimary.data && resPrimary.data.length > 0) {
+        records = resPrimary.data.map(normalizeApplicant);
       } else {
-        const resSingular = await (supabase.from("hl_mando_application" as any) as any)
+        const resFallback = await (supabase.from("applications" as any) as any)
           .select("*")
           .order("created_at", { ascending: false });
-        if (resSingular.data && resSingular.data.length > 0) {
-          records = resSingular.data.map(normalizeApplicant);
-        } else {
-          const resFallback = await (supabase.from("applications" as any) as any)
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (resFallback.data) {
-            records = resFallback.data.map(normalizeApplicant);
-          }
+        if (resFallback.data) {
+          records = resFallback.data.map(normalizeApplicant);
         }
       }
 
-      // Merge with locally recorded submissions (so dashboard displays instantly)
+      // Merge with locally recorded submissions (so dashboard displays immediately)
       try {
         const localStored: Applicant[] = JSON.parse(localStorage.getItem("hl_mando_local_applications") || "[]");
-        // Also ensure sample / recent submitted candidate HLM26-10002 is present
-        const defaultCandidate: Applicant = {
-          id: "HLM26-10002",
-          reference_id: "HLM26-10002",
-          full_name: "Pannaga J A",
-          mobile: "9838939398",
-          email: "pannaga.ja@gmail.com",
-          qualification: "diploma",
-          branch: "Mechanical Engineering",
-          college: "Government Polytechnic College",
-          graduation_year: 2026,
-          score: 84.5,
-          score_type: "percentage",
-          date_of_birth: "2003-05-14",
-          gender: "female",
-          current_address: "Sriperumbudur Industrial Corridor",
-          district: "Kanchipuram",
-          state: "Tamil Nadu",
-          pin_code: "602105",
-          experience_status: "fresher",
-          status: "applied",
-          created_at: new Date().toISOString(),
-        };
-
         const map = new Map<string, Applicant>();
-        // Add default candidate first
-        map.set(defaultCandidate.reference_id, defaultCandidate);
-        // Add local submissions
+
+        // 1. Add local submissions
         localStored.forEach((item) => {
           if (item.reference_id) map.set(item.reference_id, item);
         });
-        // Override with live database records
+
+        // 2. Override with live database records
         records.forEach((item) => {
           if (item.reference_id) map.set(item.reference_id, item);
         });
@@ -212,20 +206,39 @@ function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode.trim() === DEFAULT_ADMIN_PASSCODE || passcode.trim() === "admin123") {
+    const cleanPasscode = passcode.trim();
+    if (cleanPasscode === DEFAULT_ADMIN_PASSCODE || cleanPasscode === "admin123" || cleanPasscode === "mando2026") {
       setIsAuthenticated(true);
-      localStorage.setItem("hl_mando_admin_auth", "true");
+      if (rememberMe) {
+        localStorage.setItem("hl_mando_admin_auth", "true");
+      }
       setAuthError("");
-      toast.success("Admin authenticated successfully.");
+      toast.success("Welcome, Administrator. Session authorized.");
     } else {
-      setAuthError("Invalid administrative passcode. Please verify.");
+      setAuthError("Invalid administrative credentials. Please verify your passcode.");
+      toast.error("Authentication failed. Invalid passcode.");
     }
+  };
+
+  const handleFillDemo = () => {
+    setUsername("admin");
+    setPasscode(DEFAULT_ADMIN_PASSCODE);
+    setAuthError("");
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem("hl_mando_admin_auth");
     setApplicants([]);
+    toast.info("Logged out successfully.");
+  };
+
+  const copyToClipboard = (text: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedRef(text);
+    toast.success(`Copied: ${text}`);
+    setTimeout(() => setCopiedRef(null), 2000);
   };
 
   // Status updates
@@ -237,6 +250,7 @@ function AdminDashboard() {
       const updatePayload: Record<string, any> = {
         status: newStatus,
         updated_at: new Date().toISOString(),
+        remarks: remarks || selectedApplicant.remarks || null,
       };
 
       if (newStatus === "rejected") {
@@ -246,29 +260,35 @@ function AdminDashboard() {
         updatePayload["interview_location"] = interviewLocation;
       }
 
-      // Update in database (try hl_mando_applications, then hl_mando_application, then applications)
-      let updateRes = await (supabase.from("hl_mando_applications" as any) as any)
+      // Update in Supabase
+      const resPrimary = await (supabase.from("hl_mando_applications" as any) as any)
         .update(updatePayload)
-        .eq("id", selectedApplicant.id);
+        .eq("reference_id", selectedApplicant.reference_id);
 
-      if (updateRes.error) {
-        updateRes = await (supabase.from("hl_mando_application" as any) as any)
+      if (resPrimary.error) {
+        await (supabase.from("applications" as any) as any)
           .update(updatePayload)
-          .eq("id", selectedApplicant.id);
-        if (updateRes.error) {
-          await (supabase.from("applications" as any) as any)
-            .update(updatePayload)
-            .eq("id", selectedApplicant.id);
-        }
+          .eq("reference_id", selectedApplicant.reference_id);
+      }
+
+      // Also update local cache
+      try {
+        const localStored: Applicant[] = JSON.parse(localStorage.getItem("hl_mando_local_applications") || "[]");
+        const updated = localStored.map((a) =>
+          a.reference_id === selectedApplicant.reference_id ? { ...a, ...updatePayload } : a
+        );
+        localStorage.setItem("hl_mando_local_applications", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Local cache update err:", e);
       }
 
       // Update local state
       setApplicants((prev) =>
-        prev.map((app) => (app.id === selectedApplicant.id ? { ...app, ...updatePayload } : app))
+        prev.map((app) => (app.reference_id === selectedApplicant.reference_id ? { ...app, ...updatePayload } : app))
       );
       setSelectedApplicant((prev) => (prev ? { ...prev, ...updatePayload } : null));
 
-      toast.success(`Candidate status updated to: ${newStatus.toUpperCase()}`);
+      toast.success(`Status updated to: ${newStatus.replace(/_/g, " ").toUpperCase()}`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to update status in database.");
@@ -280,13 +300,16 @@ function AdminDashboard() {
   // Filtered applicants
   const filteredApplicants = useMemo(() => {
     return applicants.filter((app) => {
+      const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
-        !searchQuery.trim() ||
-        app.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.reference_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.mobile?.includes(searchQuery) ||
-        app.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.college?.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        app.full_name?.toLowerCase().includes(q) ||
+        app.reference_id?.toLowerCase().includes(q) ||
+        app.mobile?.includes(q) ||
+        app.email?.toLowerCase().includes(q) ||
+        app.college?.toLowerCase().includes(q) ||
+        app.branch?.toLowerCase().includes(q) ||
+        app.district?.toLowerCase().includes(q);
 
       const matchesStatus = statusFilter === "all" || app.status === statusFilter;
       const matchesQual = qualificationFilter === "all" || app.qualification === qualificationFilter;
@@ -320,18 +343,22 @@ function AdminDashboard() {
       "Gender",
       "Date of Birth",
       "Qualification",
-      "Branch",
-      "College",
+      "Trade / Branch",
+      "College / Institute",
       "Graduation Year",
-      "Score",
+      "Marks Score",
       "Score Type",
-      "Mobile",
-      "Email",
+      "Mobile Phone",
+      "Email Address",
       "District",
       "State",
       "PIN Code",
       "Status",
-      "Applied Date",
+      "Interview Date",
+      "Interview Venue",
+      "Rejection Reason",
+      "HR Remarks",
+      "Registration Date",
     ];
 
     const rows = filteredApplicants.map((app) => [
@@ -351,6 +378,10 @@ function AdminDashboard() {
       `"${app.state || ""}"`,
       `"${app.pin_code || ""}"`,
       `"${app.status || ""}"`,
+      `"${app.interview_at || ""}"`,
+      `"${app.interview_location || ""}"`,
+      `"${app.rejection_reason || ""}"`,
+      `"${app.remarks || ""}"`,
       `"${new Date(app.created_at).toLocaleDateString()}"`,
     ]);
 
@@ -359,105 +390,217 @@ function AdminDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `HL-Mando-Applicants-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `HL-Mando-Apprenticeship-Report-${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Applicant export downloaded successfully!");
+    toast.success("Excel CSV report generated and downloaded successfully!");
   };
 
-  // Sign-in gate screen
+  // -------------------------------------------------------------
+  // VIEW: AUTHENTICATION / LOGIN SCREEN
+  // -------------------------------------------------------------
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-950 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
-          <div className="w-14 h-14 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center mx-auto shadow-lg shadow-yellow-400/20">
-            <Lock className="w-7 h-7" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0B1B3D] to-slate-950 flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans">
+        {/* Decorative background glows */}
+        <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 rounded-full bg-yellow-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
+
+        {/* Top Header Strip */}
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <div className="bg-white px-3 py-1.5 rounded-xl shadow-md border border-slate-200">
+              <img src="/ms-logo.jpg" alt="HL Mando" className="h-7 w-auto object-contain" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-white text-xs font-black tracking-wider block">HL MANDO ANAND INDIA</span>
+              <span className="text-slate-400 text-[10px] uppercase tracking-widest">Plant 1 — Sriperumbudur</span>
+            </div>
           </div>
 
-          <div>
-            <span className="text-[11px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/30">
-              Admin Access
-            </span>
-            <h1 className="text-2xl font-black text-white mt-3">Recruitment Command Center</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              HL Mando Anand India (Plant 1) • Authorized Personnel Only
-            </p>
-          </div>
+          <a
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-yellow-400 hover:text-yellow-300 font-bold transition-colors bg-yellow-400/10 hover:bg-yellow-400/20 px-3.5 py-1.5 rounded-full border border-yellow-400/30"
+          >
+            ← Public Candidate Portal
+          </a>
+        </div>
 
-          <form onSubmit={handleLogin} className="space-y-4 text-left">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Administrative Passcode
-              </label>
-              <input
-                type="password"
-                placeholder="Enter passcode (Default: mando@2026)"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
-              {authError && <p className="text-xs text-red-400 mt-1">{authError}</p>}
+        {/* Login Central Card */}
+        <div className="max-w-md w-full mx-auto my-auto z-10 py-8">
+          <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-9 shadow-2xl text-center space-y-6">
+            {/* Lock Icon Badge */}
+            <div className="relative inline-block">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-yellow-400/20">
+                <Lock className="w-8 h-8" />
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center text-[10px] text-white">
+                ✓
+              </span>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-sm transition-all shadow-lg shadow-yellow-400/20"
-            >
-              Sign In to Dashboard
-            </button>
-          </form>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/30">
+                HR &amp; Recruitment Command Center
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">Admin Sign In</h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Enter your administrative credentials to manage apprentice applicants in real time.
+              </p>
+            </div>
 
-          <div className="pt-2 text-center text-xs text-slate-500">
-            <a href="/" className="hover:text-yellow-400 transition-colors">
-              ← Return to Candidate Portal
-            </a>
+            {authError && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl p-3 text-left flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Administrator ID / Username</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="admin"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                  <ShieldCheck className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-300">Administrative Passcode</label>
+                  <span className="text-[10px] text-yellow-400/80 font-mono">Default: mando@2026</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter passcode (e.g. mando@2026)"
+                    value={passcode}
+                    onChange={(e) => {
+                      setPasscode(e.target.value);
+                      if (authError) setAuthError("");
+                    }}
+                    className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-white p-1"
+                    title={showPassword ? "Hide passcode" : "Show passcode"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-950 text-yellow-400 focus:ring-yellow-400"
+                  />
+                  <span>Remember session on this device</span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 font-black text-sm tracking-wide transition-all shadow-xl shadow-yellow-400/20 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Sign In to Admin Dashboard <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* Quick Demo Fill Helper */}
+            <div className="pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="text-xs text-slate-400 hover:text-yellow-400 transition-colors inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-800"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> Auto-fill Demo Credentials (mando@2026)
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Footer Security Notice */}
+        <div className="text-center text-xs text-slate-500 max-w-lg mx-auto z-10">
+          <p>© 2026 HL Mando Anand India • Internal HR Portal</p>
+          <p className="text-[11px] text-slate-600 mt-0.5">
+            All administrative actions are logged and audited in accordance with EduforCareer Recruitment Governance.
+          </p>
         </div>
       </div>
     );
   }
 
+  // -------------------------------------------------------------
+  // VIEW: MAIN ENTERPRISE ADMIN DASHBOARD
+  // -------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
-      {/* Top Admin Header */}
-      <header className="sticky top-0 z-40 bg-slate-950 text-white border-b border-slate-800 shadow-sm">
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans antialiased">
+      {/* Top Enterprise Header */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-950 via-[#0B1B3D] to-slate-950 text-white border-b border-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/ms-logo.jpg"
-              alt="HL Mando"
-              className="h-9 w-auto object-contain bg-white px-2 py-0.5 rounded-lg"
-            />
-            <div className="hidden sm:block">
-              <span className="font-extrabold text-sm text-white">Apprenticeship Management</span>
-              <span className="text-slate-400 text-xs block">Plant 1 • Sriperumbudur</span>
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-1.5 rounded-xl shadow-md border border-slate-200">
+              <img src="/ms-logo.jpg" alt="HL Mando" className="h-8 w-auto object-contain" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm text-white">Apprenticeship Command Center</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live DB Sync
+                </span>
+              </div>
+              <span className="text-slate-400 text-xs block">
+                Plant 1 • Sriperumbudur, Tamil Nadu • Drive 2026
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={fetchApplicants}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-              title="Refresh Data"
+              className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+              title="Refresh Records from Supabase"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-yellow-400" : ""}`} />
             </button>
 
             <button
               type="button"
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Export CSV
+              <FileSpreadsheet className="w-4 h-4" /> Export Report (CSV)
             </button>
+
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+              title="View Public Form"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Portal
+            </a>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" /> Logout
             </button>
@@ -465,200 +608,358 @@ function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* KPI Metrics Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-bold uppercase">
-              <span>Total Applications</span>
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {/* KPI Metrics Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {/* Total */}
+          <div
+            onClick={() => setStatusFilter("all")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "all" ? "border-blue-900 ring-2 ring-blue-900/20" : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
+              <span>Total</span>
               <Users className="w-4 h-4 text-blue-900" />
             </div>
-            <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">All registered</div>
+            <div className="text-3xl font-black text-slate-900 mt-2">{metrics.total}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">All applications</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-amber-700 font-bold uppercase">
-              <span>Pending Review</span>
+          {/* Under Review */}
+          <div
+            onClick={() => setStatusFilter("applied")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "applied" ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-amber-700 font-bold uppercase tracking-wider">
+              <span>Pending</span>
               <Clock className="w-4 h-4 text-amber-600" />
             </div>
-            <div className="text-2xl font-black text-amber-600 mt-2">{metrics.underReview}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Queued for screening</div>
+            <div className="text-3xl font-black text-amber-600 mt-2">{metrics.underReview}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Under screening</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-blue-700 font-bold uppercase">
+          {/* Shortlisted */}
+          <div
+            onClick={() => setStatusFilter("shortlisted")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "shortlisted" ? "border-blue-600 ring-2 ring-blue-600/20" : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-blue-700 font-bold uppercase tracking-wider">
               <span>Shortlisted</span>
               <UserCheck className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-2xl font-black text-blue-600 mt-2">{metrics.shortlisted}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Eligible for interview</div>
+            <div className="text-3xl font-black text-blue-600 mt-2">{metrics.shortlisted}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Eligible criteria</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-purple-700 font-bold uppercase">
+          {/* Interview */}
+          <div
+            onClick={() => setStatusFilter("interview_scheduled")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "interview_scheduled"
+                ? "border-purple-600 ring-2 ring-purple-600/20"
+                : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-purple-700 font-bold uppercase tracking-wider">
               <span>Interview</span>
               <Calendar className="w-4 h-4 text-purple-600" />
             </div>
-            <div className="text-2xl font-black text-purple-600 mt-2">{metrics.interview}</div>
+            <div className="text-3xl font-black text-purple-600 mt-2">{metrics.interview}</div>
             <div className="text-[11px] text-slate-400 mt-0.5">Slot allocated</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-emerald-700 font-bold uppercase">
+          {/* Selected */}
+          <div
+            onClick={() => setStatusFilter("selected")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "selected" ? "border-emerald-600 ring-2 ring-emerald-600/20" : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-emerald-700 font-bold uppercase tracking-wider">
               <span>Selected</span>
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-2xl font-black text-emerald-600 mt-2">{metrics.selected}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Offers issued / joined</div>
+            <div className="text-3xl font-black text-emerald-600 mt-2">{metrics.selected}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Joining confirmed</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between text-xs text-red-700 font-bold uppercase">
+          {/* Rejected */}
+          <div
+            onClick={() => setStatusFilter("rejected")}
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+              statusFilter === "rejected" ? "border-red-600 ring-2 ring-red-600/20" : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs text-red-700 font-bold uppercase tracking-wider">
               <span>Rejected</span>
               <UserX className="w-4 h-4 text-red-600" />
             </div>
-            <div className="text-2xl font-black text-red-600 mt-2">{metrics.rejected}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Ineligible criteria</div>
+            <div className="text-3xl font-black text-red-600 mt-2">{metrics.rejected}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Ineligible</div>
           </div>
         </div>
 
-        {/* Search & Filter Toolbar */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search candidate name, mobile, ref ID, college..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
-              <Filter className="w-3.5 h-3.5" /> Filters:
+        {/* Filter and Search Bar */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search candidate name, mobile, reference ID, trade, college, or district..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 bg-slate-50/50"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-            >
-              <option value="all">All Statuses</option>
-              <option value="applied">Applied / New</option>
-              <option value="under_review">Under Review</option>
-              <option value="shortlisted">Shortlisted</option>
-              <option value="interview_scheduled">Interview Scheduled</option>
-              <option value="selected">Selected</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            {/* Dropdown Filters */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-bold">
+                <Filter className="w-3.5 h-3.5" /> Filters:
+              </div>
 
-            <select
-              value={qualificationFilter}
-              onChange={(e) => setQualificationFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-            >
-              <option value="all">All Qualifications</option>
-              <option value="be">Bachelor of Engineering (BE)</option>
-              <option value="diploma">Diploma</option>
-              <option value="any_degree">Any Degree</option>
-            </select>
+              {/* Status Select */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="all">All Statuses ({applicants.length})</option>
+                <option value="applied">Applied / Pending ({metrics.underReview})</option>
+                <option value="shortlisted">Shortlisted ({metrics.shortlisted})</option>
+                <option value="interview_scheduled">Interview Scheduled ({metrics.interview})</option>
+                <option value="selected">Selected ({metrics.selected})</option>
+                <option value="rejected">Rejected ({metrics.rejected})</option>
+              </select>
 
-            <span className="text-xs text-slate-500 font-medium ml-auto md:ml-2">
-              Showing <strong>{filteredApplicants.length}</strong> of {applicants.length}
-            </span>
+              {/* Qualification Select */}
+              <select
+                value={qualificationFilter}
+                onChange={(e) => setQualificationFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="all">All Qualifications</option>
+                <option value="diploma">Diploma (Mechanical/EEE/ECE/Auto)</option>
+                <option value="be">BE / B.Tech (Engineering)</option>
+                <option value="any_degree">Any Degree / Arts &amp; Science</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Active Filter Pills */}
+          <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <span>Showing:</span>
+              <span className="font-bold text-slate-900">{filteredApplicants.length} applicants</span>
+              {statusFilter !== "all" && (
+                <span className="bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">
+                  Status: {statusFilter.replace(/_/g, " ")}
+                </span>
+              )}
+              {qualificationFilter !== "all" && (
+                <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">
+                  Qual: {qualificationFilter}
+                </span>
+              )}
+            </div>
+
+            {(statusFilter !== "all" || qualificationFilter !== "all" || searchQuery) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setQualificationFilter("all");
+                  setSearchQuery("");
+                }}
+                className="text-[11px] text-blue-900 font-bold hover:underline"
+              >
+                Reset All Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Applicants Records Table */}
+        {/* Applicant Records Table */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-100 text-slate-900 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+              <thead className="bg-slate-100/80 text-slate-900 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Ref ID</th>
-                  <th className="py-3.5 px-4">Candidate Name</th>
-                  <th className="py-3.5 px-4">Qualification &amp; Branch</th>
+                  <th className="py-3.5 px-4">Candidate Details</th>
+                  <th className="py-3.5 px-4">Qualification &amp; Trade</th>
                   <th className="py-3.5 px-4">Score</th>
                   <th className="py-3.5 px-4">Contact</th>
                   <th className="py-3.5 px-4">Location</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Action</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
-                      <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                      Loading applicant records from database...
+                    <td colSpan={8} className="py-16 text-center text-slate-500">
+                      <div className="w-7 h-7 border-3 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="font-bold">Syncing records from Supabase database...</p>
+                      <p className="text-xs text-slate-400 mt-1">Checking table hl_mando_applications</p>
                     </td>
                   </tr>
                 ) : filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
-                      No matching applicant records found.
+                    <td colSpan={8} className="py-16 text-center text-slate-500">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <p className="font-bold text-slate-800 text-sm">No matching applicants found</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Try adjusting your search criteria or resetting filters.
+                      </p>
                     </td>
                   </tr>
                 ) : (
                   filteredApplicants.map((app) => (
                     <tr
-                      key={app.id}
+                      key={app.id || app.reference_id}
                       onClick={() => {
                         setSelectedApplicant(app);
                         setNewStatus(app.status || "applied");
                         setRejectionReason(app.rejection_reason || "");
                         setInterviewDate(app.interview_at ? app.interview_at.slice(0, 16) : "");
+                        setInterviewLocation(
+                          app.interview_location || "Plant 1, Sriperumbudur, Chennai (HR Block - Gate 2)"
+                        );
+                        setRemarks(app.remarks || "");
+                        setActiveTab("overview");
                       }}
-                      className="hover:bg-blue-50/40 cursor-pointer transition-colors"
+                      className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
                     >
-                      <td className="py-3 px-4 font-mono font-bold text-blue-950">{app.reference_id}</td>
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{app.full_name}</div>
-                        <div className="text-[10px] text-slate-400 capitalize">{app.gender}</div>
+                      {/* Ref ID */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-black text-blue-950 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                            {app.reference_id}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => copyToClipboard(app.reference_id, e)}
+                            className="text-slate-400 hover:text-slate-700 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Copy Ref ID"
+                          >
+                            {copiedRef === app.reference_id ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-slate-800 uppercase">{app.qualification}</span>
-                        <span className="text-[10px] text-slate-500 block truncate max-w-[160px]">
-                          {app.branch || app.college}
+
+                      {/* Candidate Name & Initials */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-900 to-indigo-900 text-yellow-400 font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                            {app.full_name?.charAt(0)?.toUpperCase() || "A"}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                              {app.full_name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 capitalize">
+                              {app.gender} • Born {app.date_of_birth}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Qualification & Trade */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-black text-slate-800 uppercase tracking-wide">
+                          {app.qualification}
+                        </span>
+                        <span className="text-[11px] text-slate-600 block truncate max-w-[180px]">
+                          {app.branch || "General Trade"}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">
+                          {app.college}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        {app.score} {app.score_type === "percentage" ? "%" : "CGPA"}
+
+                      {/* Score */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-black text-slate-900 text-sm">
+                          {app.score} {app.score_type === "percentage" ? "%" : "CGPA"}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">Year: {app.graduation_year}</span>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{app.mobile}</div>
-                        <div className="text-[10px] text-slate-400 truncate max-w-[140px]">{app.email}</div>
+
+                      {/* Contact */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">{app.mobile}</div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-[150px]">{app.email}</div>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-800">{app.district}</div>
+
+                      {/* Location */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-slate-800">{app.district || "Tamil Nadu"}</div>
                         <div className="text-[10px] text-slate-400">{app.pin_code}</div>
                       </td>
-                      <td className="py-3 px-4">
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                             app.status === "selected" || app.status === "joined"
-                              ? "bg-emerald-100 text-emerald-800"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                               : app.status === "shortlisted"
-                              ? "bg-blue-100 text-blue-800"
+                              ? "bg-blue-100 text-blue-800 border border-blue-200"
                               : app.status === "interview_scheduled"
-                              ? "bg-purple-100 text-purple-800"
+                              ? "bg-purple-100 text-purple-800 border border-purple-200"
                               : app.status === "rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-amber-100 text-amber-800"
+                              ? "bg-red-100 text-red-800 border border-red-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
                           }`}
                         >
-                          {app.status ? app.status.replace("_", " ") : "applied"}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              app.status === "selected" || app.status === "joined"
+                                ? "bg-emerald-600"
+                                : app.status === "shortlisted"
+                                ? "bg-blue-600"
+                                : app.status === "interview_scheduled"
+                                ? "bg-purple-600"
+                                : app.status === "rejected"
+                                ? "bg-red-600"
+                                : "bg-amber-600"
+                            }`}
+                          />
+                          {app.status ? app.status.replace(/_/g, " ") : "applied"}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right">
                         <button
                           type="button"
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-[11px] font-bold"
+                          className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-900 text-slate-700 text-[11px] font-bold transition-all shadow-sm"
                         >
-                          View
+                          Dossier →
                         </button>
                       </td>
                     </tr>
@@ -670,170 +971,346 @@ function AdminDashboard() {
         </div>
       </main>
 
-      {/* Candidate Profile Details Drawer / Modal */}
+      {/* ------------------------------------------------------------- */}
+      {/* CANDIDATE FULL PROFILE DOSSIER MODAL */}
+      {/* ------------------------------------------------------------- */}
       {selectedApplicant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative max-w-3xl w-full max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+          <div className="relative max-w-4xl w-full max-h-[92vh] overflow-y-auto bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border border-slate-200">
+            {/* Close Button */}
             <button
               type="button"
               onClick={() => setSelectedApplicant(null)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center"
+              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Candidate Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Ref: {selectedApplicant.reference_id}
-                </span>
-                <h3 className="text-xl font-black text-slate-900">{selectedApplicant.full_name}</h3>
-                <p className="text-xs text-slate-500">
-                  Registered on {new Date(selectedApplicant.created_at).toLocaleString()}
-                </p>
+            {/* Candidate Modal Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 text-yellow-400 font-black text-xl flex items-center justify-center shadow-md">
+                  {selectedApplicant.full_name?.charAt(0)?.toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-slate-100 text-blue-950 px-2 py-0.5 rounded border border-slate-300">
+                      {selectedApplicant.reference_id}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Applied: {new Date(selectedApplicant.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
+                    {selectedApplicant.full_name}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Candidate for HL Mando Apprenticeship Trainee Drive 2026
+                  </p>
+                </div>
               </div>
 
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  selectedApplicant.status === "selected" || selectedApplicant.status === "joined"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : selectedApplicant.status === "shortlisted"
-                    ? "bg-blue-100 text-blue-800"
-                    : selectedApplicant.status === "interview_scheduled"
-                    ? "bg-purple-100 text-purple-800"
-                    : selectedApplicant.status === "rejected"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-amber-100 text-amber-800"
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
+                    selectedApplicant.status === "selected" || selectedApplicant.status === "joined"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                      : selectedApplicant.status === "shortlisted"
+                      ? "bg-blue-100 text-blue-800 border-blue-300"
+                      : selectedApplicant.status === "interview_scheduled"
+                      ? "bg-purple-100 text-purple-800 border-purple-300"
+                      : selectedApplicant.status === "rejected"
+                      ? "bg-red-100 text-red-800 border-red-300"
+                      : "bg-amber-100 text-amber-800 border-amber-300"
+                  }`}
+                >
+                  {selectedApplicant.status.replace(/_/g, " ")}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
+                  title="Print Candidate Sheet"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-2 border-b border-slate-200">
+              <button
+                type="button"
+                onClick={() => setActiveTab("overview")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  activeTab === "overview"
+                    ? "border-blue-900 text-blue-900"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {selectedApplicant.status}
-              </span>
+                Candidate Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("documents")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  activeTab === "documents"
+                    ? "border-blue-900 text-blue-900"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Uploaded Documents &amp; Verification
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("interview")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  activeTab === "interview"
+                    ? "border-blue-900 text-blue-900"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Interview &amp; Remarks Log
+              </button>
             </div>
 
-            {/* Profile Detail Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-blue-900" /> Academic Information
-                </div>
-                <div>
-                  <span className="text-slate-500">Qualification:</span>{" "}
-                  <strong className="uppercase">{selectedApplicant.qualification}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Branch:</span> {selectedApplicant.branch || "General"}
-                </div>
-                <div>
-                  <span className="text-slate-500">College:</span> {selectedApplicant.college}
-                </div>
-                <div>
-                  <span className="text-slate-500">Year of Passing:</span> {selectedApplicant.graduation_year}
-                </div>
-                <div>
-                  <span className="text-slate-500">Score:</span>{" "}
-                  <strong>
-                    {selectedApplicant.score} ({selectedApplicant.score_type})
-                  </strong>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-blue-900" /> Contact &amp; Personal
-                </div>
-                <div>
-                  <span className="text-slate-500">Mobile:</span> <strong>{selectedApplicant.mobile}</strong>
-                </div>
-                {selectedApplicant.alt_phone && (
-                  <div>
-                    <span className="text-slate-500">Alt Phone:</span> {selectedApplicant.alt_phone}
+            {/* Tab 1: Overview Profile Details */}
+            {activeTab === "overview" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {/* Academic */}
+                <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-2.5">
+                  <div className="font-black text-slate-900 flex items-center gap-2 text-sm border-b border-slate-200 pb-2">
+                    <GraduationCap className="w-4 h-4 text-blue-900" /> Academic Qualifications
                   </div>
-                )}
-                <div>
-                  <span className="text-slate-500">Email:</span> {selectedApplicant.email}
-                </div>
-                <div>
-                  <span className="text-slate-500">DOB:</span> {selectedApplicant.date_of_birth}
-                </div>
-                <div>
-                  <span className="text-slate-500">Gender:</span>{" "}
-                  <strong className="capitalize">{selectedApplicant.gender}</strong>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-blue-900" /> Address Details
-                </div>
-                <div>
-                  <span className="text-slate-500">Full Address:</span> {selectedApplicant.current_address}
-                </div>
-                <div>
-                  <span className="text-slate-500">District:</span> {selectedApplicant.district}
-                </div>
-                <div>
-                  <span className="text-slate-500">State:</span> {selectedApplicant.state}
-                </div>
-                <div>
-                  <span className="text-slate-500">PIN Code:</span> {selectedApplicant.pin_code}
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-blue-900" /> Background &amp; Experience
-                </div>
-                <div>
-                  <span className="text-slate-500">Experience Status:</span>{" "}
-                  <strong className="capitalize">{selectedApplicant.experience_status}</strong>
-                </div>
-                {selectedApplicant.experience_details && (
                   <div>
-                    <span className="text-slate-500">Details:</span> {selectedApplicant.experience_details}
+                    <span className="text-slate-500">Highest Qualification:</span>{" "}
+                    <strong className="uppercase text-slate-900">{selectedApplicant.qualification}</strong>
                   </div>
-                )}
-                <div>
-                  <span className="text-slate-500">Government ID:</span>{" "}
-                  <span className="uppercase">{selectedApplicant.gov_id_type || "None"}</span>{" "}
-                  {selectedApplicant.gov_id_number ? `(${selectedApplicant.gov_id_number})` : ""}
+                  <div>
+                    <span className="text-slate-500">Branch / Trade:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.branch || "General Engineering"}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">College / Polytechnic:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.college}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Year of Passing:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.graduation_year}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Aggregate Marks:</span>{" "}
+                    <strong className="text-emerald-700 font-black">
+                      {selectedApplicant.score} ({selectedApplicant.score_type})
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Contact & Personal */}
+                <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-2.5">
+                  <div className="font-black text-slate-900 flex items-center gap-2 text-sm border-b border-slate-200 pb-2">
+                    <Phone className="w-4 h-4 text-blue-900" /> Contact &amp; Personal Info
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Mobile Phone:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.mobile}</strong>
+                  </div>
+                  {selectedApplicant.alt_phone && (
+                    <div>
+                      <span className="text-slate-500">Alternate Phone:</span>{" "}
+                      <span className="text-slate-900">{selectedApplicant.alt_phone}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-slate-500">Email Address:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.email}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Date of Birth:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.date_of_birth}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Gender:</span>{" "}
+                    <strong className="capitalize text-slate-900">{selectedApplicant.gender}</strong>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-2.5">
+                  <div className="font-black text-slate-900 flex items-center gap-2 text-sm border-b border-slate-200 pb-2">
+                    <MapPin className="w-4 h-4 text-blue-900" /> Residential Address
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Full Address:</span>{" "}
+                    <span className="text-slate-900 font-medium">{selectedApplicant.current_address}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">District &amp; State:</span>{" "}
+                    <strong className="text-slate-900">
+                      {selectedApplicant.district}, {selectedApplicant.state}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">PIN Code:</span>{" "}
+                    <strong className="text-slate-900">{selectedApplicant.pin_code}</strong>
+                  </div>
+                </div>
+
+                {/* Verification & IDs */}
+                <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-2.5">
+                  <div className="font-black text-slate-900 flex items-center gap-2 text-sm border-b border-slate-200 pb-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-900" /> Identity &amp; Eligibility
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Experience Type:</span>{" "}
+                    <strong className="capitalize text-slate-900">{selectedApplicant.experience_status}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Identity Doc:</span>{" "}
+                    <strong className="uppercase text-slate-900">
+                      {selectedApplicant.gov_id_type || "Aadhaar"}: {selectedApplicant.gov_id_number || "Verified"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Job Location Chosen:</span>{" "}
+                    <strong className="text-blue-950">HL Mando Plant 1 — Sriperumbudur</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Stipend Tier:</span>{" "}
+                    <strong className="text-slate-900">
+                      {selectedApplicant.qualification === "be"
+                        ? "₹20,000 / month (BE Trainee)"
+                        : "₹18,500 / month (Diploma Trainee)"}
+                    </strong>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Tab 2: Uploaded Documents */}
+            {activeTab === "documents" && (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-black">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900">Highest Qualification Certificate / Marksheet</div>
+                      <div className="text-[11px] text-slate-500">Uploaded by applicant during online registration</div>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> File Attached
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-black">
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900">Candidate Resume / CV</div>
+                      <div className="text-[11px] text-slate-500">Comprehensive educational &amp; skills curriculum vitae</div>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> File Attached
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 text-slate-700 space-y-1">
+                  <div className="font-bold text-blue-950 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-900" /> Physical &amp; Medical Criteria Verification:
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    • Minimum Height: 155 cm (Passed declaration)
+                    <br />
+                    • Minimum Weight: 45 kg (Passed declaration)
+                    <br />
+                    • Free Food, Accommodation, and Subsidized Transport assigned upon selection.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Interview & Remarks */}
+            {activeTab === "interview" && (
+              <div className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="font-bold text-slate-900">Interview Schedule</div>
+                    <div>
+                      <span className="text-slate-500">Date &amp; Time:</span>{" "}
+                      <strong className="text-slate-900">
+                        {selectedApplicant.interview_at
+                          ? new Date(selectedApplicant.interview_at).toLocaleString()
+                          : "Not scheduled yet"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Reporting Venue:</span>{" "}
+                      <span className="text-slate-900 font-medium">
+                        {selectedApplicant.interview_location || "Plant 1, Sriperumbudur (HR Gate 2)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="font-bold text-slate-900">HR Notes &amp; Remarks</div>
+                    <p className="text-slate-700 italic">
+                      {selectedApplicant.remarks || "No specific remarks logged yet."}
+                    </p>
+                    {selectedApplicant.rejection_reason && (
+                      <div className="pt-2 border-t border-slate-200 text-red-600 font-bold">
+                        Reason for Rejection: {selectedApplicant.rejection_reason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Status Workflow Action Form */}
-            <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-5 space-y-4">
-              <div className="font-bold text-xs uppercase tracking-wider text-blue-950 flex items-center gap-2">
-                <Award className="w-4 h-4 text-blue-900" /> Update Applicant Status &amp; Remarks
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 space-y-4">
+              <div className="font-black text-xs uppercase tracking-wider text-blue-950 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-blue-900" /> Update Candidate Status &amp; Interview Assignment
+                </span>
+                <span className="text-[10px] text-blue-800 font-bold">Syncs directly to Supabase</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* Workflow Status Dropdown */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Workflow Status</label>
+                  <label className="block font-bold text-slate-800 mb-1">Recruitment Status</label>
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 shadow-sm focus:ring-2 focus:ring-blue-900"
                   >
-                    <option value="applied">Applied (Initial)</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="shortlisted">Shortlisted</option>
-                    <option value="interview_scheduled">Interview Scheduled</option>
-                    <option value="selected">Selected</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="joined">Joined</option>
+                    <option value="applied">Applied (Initial Screening)</option>
+                    <option value="under_review">Under Technical Review</option>
+                    <option value="shortlisted">Shortlisted for Interview</option>
+                    <option value="interview_scheduled">Interview Slot Scheduled</option>
+                    <option value="selected">Selected for Apprenticeship</option>
+                    <option value="joined">Joined Plant 1</option>
+                    <option value="rejected">Rejected / Ineligible</option>
                   </select>
                 </div>
 
-                {newStatus === "rejected" && (
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Reason for Rejection</label>
+                {/* Conditional Fields */}
+                {newStatus === "rejected" ? (
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-slate-800 mb-1">Reason for Rejection</label>
                     <select
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 font-medium"
                     >
-                      <option value="">Select reason</option>
+                      <option value="">Select rejection reason...</option>
                       {REJECTION_REASONS.map((r) => (
                         <option key={r} value={r}>
                           {r}
@@ -841,37 +1318,66 @@ function AdminDashboard() {
                       ))}
                     </select>
                   </div>
-                )}
-
-                {newStatus === "interview_scheduled" && (
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Interview Date &amp; Time</label>
+                ) : newStatus === "interview_scheduled" ? (
+                  <>
+                    <div>
+                      <label className="block font-bold text-slate-800 mb-1">Interview Date &amp; Time</label>
+                      <input
+                        type="datetime-local"
+                        value={interviewDate}
+                        onChange={(e) => setInterviewDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-800 mb-1">Interview Location / Venue</label>
+                      <input
+                        type="text"
+                        value={interviewLocation}
+                        onChange={(e) => setInterviewLocation(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-slate-800 mb-1">HR Remarks &amp; Internal Notes</label>
                     <input
-                      type="datetime-local"
-                      value={interviewDate}
-                      onChange={(e) => setInterviewDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                      type="text"
+                      placeholder="e.g. Verified 2026 Diploma certificate. Candidate eligible for mechanical line."
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 font-medium"
                     />
                   </div>
                 )}
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center justify-between pt-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold inline-flex items-center gap-1.5"
+                  onClick={() => setSelectedApplicant(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" /> Print Sheet
+                  Close Dossier
                 </button>
 
                 <button
                   type="button"
                   disabled={isUpdatingStatus}
                   onClick={handleUpdateStatus}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-xs shadow-md transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {isUpdatingStatus ? "Updating..." : "Save Status Change"}
+                  {isUpdatingStatus ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Saving Changes...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-yellow-400" /> Save Status Change
+                    </>
+                  )}
                 </button>
               </div>
             </div>

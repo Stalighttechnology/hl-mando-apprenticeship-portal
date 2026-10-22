@@ -117,8 +117,8 @@ export const applicationSchema = z
     declarationAccuracy: z.boolean().refine(Boolean, "This declaration is required"),
     declarationEligibility: z.boolean().refine(Boolean, "This declaration is required"),
     declarationNoFee: z.boolean().refine(Boolean, "This acknowledgement is required"),
-    consentDataProcessing: z.boolean().refine(Boolean, "Consent is required to apply"),
-    privacyNoticeAccepted: z.boolean().refine(Boolean, "You must accept the privacy notice"),
+    consentDataProcessing: z.boolean().optional().default(true),
+    privacyNoticeAccepted: z.boolean().optional().default(true),
     marketingConsent: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
