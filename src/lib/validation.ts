@@ -207,7 +207,7 @@ export const MIME_BY_EXT: Record<string, string> = {
 
 export function fileExtension(name: string): string {
   const parts = name.toLowerCase().split(".");
-  return parts.length > 1 ? parts[parts.length - 1] : "";
+  return parts.length > 1 ? (parts[parts.length - 1] ?? "") : "";
 }
 
 export async function fileMagicHex(file: File, bytes = 8): Promise<string> {
