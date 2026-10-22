@@ -252,6 +252,21 @@ function RecruitmentPortal() {
       }
     }
 
+    let hasFileError = false;
+    if (!certificateFile) {
+      setCertificateError("Highest qualification certificate / marksheet is required");
+      hasFileError = true;
+    } else {
+      setCertificateError(null);
+    }
+
+    if (!resumeFile) {
+      setResumeError("Updated resume / CV is required");
+      hasFileError = true;
+    } else {
+      setResumeError(null);
+    }
+
     if (!formData.declarationAccuracy) errs["declarationAccuracy"] = "Required";
     if (!formData.declarationEligibility) errs["declarationEligibility"] = "Required";
     if (!formData.declarationNoFee) errs["declarationNoFee"] = "Required";
@@ -263,6 +278,12 @@ function RecruitmentPortal() {
       toast.error(`Please review the form: ${firstError ?? "Please fill all required fields"}`);
       return false;
     }
+
+    if (hasFileError) {
+      toast.error("Please upload both your Qualification Certificate and Resume");
+      return false;
+    }
+
     return true;
   };
 
@@ -1400,10 +1421,10 @@ function RecruitmentPortal() {
                       {errors["score"] && <p className="text-xs text-red-600 mt-1">{errors["score"]}</p>}
                     </div>
 
-                    {/* Highest Qualification Certificate Upload */}
+                    {/* Highest Qualification Certificate Upload (Compulsory) */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Highest Qualification Certificate / Marksheet <span className="text-slate-400 font-normal">(Diploma / BE / Degree)</span>
+                        Highest Qualification Certificate / Marksheet <span className="text-red-500">*</span> <span className="text-slate-400 font-normal">(Diploma / BE / Degree)</span>
                       </label>
                       {certificateFile ? (
                         <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-300 bg-emerald-50/70 text-xs shadow-sm">
@@ -1414,7 +1435,10 @@ function RecruitmentPortal() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setCertificateFile(null)}
+                            onClick={() => {
+                              setCertificateFile(null);
+                              setCertificateError("Highest qualification certificate / marksheet is required");
+                            }}
                             className="p-1 hover:bg-emerald-100 rounded text-slate-500 hover:text-slate-700 transition-colors"
                             title="Remove attached certificate"
                           >
@@ -1422,10 +1446,10 @@ function RecruitmentPortal() {
                           </button>
                         </div>
                       ) : (
-                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-blue-900 rounded-xl p-3.5 cursor-pointer bg-slate-50 hover:bg-blue-50/30 transition-all">
-                          <Upload className="w-4 h-4 text-slate-400 mb-1" />
-                          <span className="text-xs font-semibold text-slate-700">Click to upload Marksheet / Certificate</span>
-                          <span className="text-[10px] text-slate-400">PDF, JPG, PNG up to 2MB</span>
+                        <label className={`flex flex-col items-center justify-center border-2 border-dashed ${certificateError ? "border-red-500 bg-red-50/40" : "border-slate-300 bg-slate-50"} hover:border-blue-900 rounded-xl p-3.5 cursor-pointer hover:bg-blue-50/30 transition-all`}>
+                          <Upload className={`w-4 h-4 mb-1 ${certificateError ? "text-red-500" : "text-slate-400"}`} />
+                          <span className="text-xs font-semibold text-slate-700">Click to upload Marksheet / Certificate <span className="text-red-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">PDF, JPG, PNG up to 2MB (Mandatory)</span>
                           <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
@@ -1434,13 +1458,13 @@ function RecruitmentPortal() {
                           />
                         </label>
                       )}
-                      {certificateError && <p className="text-xs text-red-600 mt-1">{certificateError}</p>}
+                      {certificateError && <p className="text-xs text-red-600 mt-1 font-semibold">{certificateError}</p>}
                     </div>
 
-                    {/* Resume / CV Upload */}
+                    {/* Resume / CV Upload (Compulsory) */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Updated Resume / CV <span className="text-slate-400 font-normal">(Curriculum Vitae)</span>
+                        Updated Resume / CV <span className="text-red-500">*</span> <span className="text-slate-400 font-normal">(Curriculum Vitae)</span>
                       </label>
                       {resumeFile ? (
                         <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-300 bg-emerald-50/70 text-xs shadow-sm">
@@ -1451,7 +1475,10 @@ function RecruitmentPortal() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setResumeFile(null)}
+                            onClick={() => {
+                              setResumeFile(null);
+                              setResumeError("Updated resume / CV is required");
+                            }}
                             className="p-1 hover:bg-emerald-100 rounded text-slate-500 hover:text-slate-700 transition-colors"
                             title="Remove attached resume"
                           >
@@ -1459,10 +1486,10 @@ function RecruitmentPortal() {
                           </button>
                         </div>
                       ) : (
-                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-blue-900 rounded-xl p-3.5 cursor-pointer bg-slate-50 hover:bg-blue-50/30 transition-all">
-                          <Upload className="w-4 h-4 text-slate-400 mb-1" />
-                          <span className="text-xs font-semibold text-slate-700">Click to upload Resume / CV</span>
-                          <span className="text-[10px] text-slate-400">PDF, DOC, DOCX up to 2MB</span>
+                        <label className={`flex flex-col items-center justify-center border-2 border-dashed ${resumeError ? "border-red-500 bg-red-50/40" : "border-slate-300 bg-slate-50"} hover:border-blue-900 rounded-xl p-3.5 cursor-pointer hover:bg-blue-50/30 transition-all`}>
+                          <Upload className={`w-4 h-4 mb-1 ${resumeError ? "text-red-500" : "text-slate-400"}`} />
+                          <span className="text-xs font-semibold text-slate-700">Click to upload Resume / CV <span className="text-red-500">*</span></span>
+                          <span className="text-[10px] text-slate-400">PDF, DOC, DOCX up to 2MB (Mandatory)</span>
                           <input
                             type="file"
                             accept=".pdf,.doc,.docx"
@@ -1471,7 +1498,7 @@ function RecruitmentPortal() {
                           />
                         </label>
                       )}
-                      {resumeError && <p className="text-xs text-red-600 mt-1">{resumeError}</p>}
+                      {resumeError && <p className="text-xs text-red-600 mt-1 font-semibold">{resumeError}</p>}
                     </div>
                   </div>
                 </div>
