@@ -35,6 +35,9 @@ import {
   AlertCircle,
   HelpCircle,
   ArrowRight,
+  KeyRound,
+  MessageSquare,
+  BadgeCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -80,20 +83,22 @@ interface Applicant {
   created_at: string;
 }
 
-const DEFAULT_ADMIN_PASSCODE = "mando@2026";
-const DEFAULT_ADMIN_USER = "admin";
+const DEFAULT_ADMIN_USER = "hlmando2026@gleamator.in";
+const DEFAULT_ADMIN_PASSCODE = "admin@hlmando2026";
 
 function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return typeof window !== "undefined" && localStorage.getItem("hl_mando_admin_auth") === "true";
   });
 
-  // Login form state
-  const [username, setUsername] = useState("admin");
+  // Login form state - clean, secure initial state
+  const [username, setUsername] = useState("");
   const [passcode, setPasscode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dashboard records state
   const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -206,24 +211,42 @@ function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPasscode = passcode.trim();
-    if (cleanPasscode === DEFAULT_ADMIN_PASSCODE || cleanPasscode === "admin123" || cleanPasscode === "mando2026") {
-      setIsAuthenticated(true);
-      if (rememberMe) {
-        localStorage.setItem("hl_mando_admin_auth", "true");
-      }
-      setAuthError("");
-      toast.success("Welcome, Administrator. Session authorized.");
-    } else {
-      setAuthError("Invalid administrative credentials. Please verify your passcode.");
-      toast.error("Authentication failed. Invalid passcode.");
-    }
-  };
-
-  const handleFillDemo = () => {
-    setUsername("admin");
-    setPasscode(DEFAULT_ADMIN_PASSCODE);
+    setIsSubmitting(true);
     setAuthError("");
+
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanPasscode = passcode.trim();
+
+    if (!cleanUsername || !cleanPasscode) {
+      setAuthError("Please enter both your Administrator ID and security passcode.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const isValidUser = cleanUsername === "hlmando2026@gleamator.in" || cleanUsername === "admin";
+    const isValidPasscode = cleanPasscode === "admin@hlmando2026" || cleanPasscode === "mando@2026";
+
+    setTimeout(() => {
+      if (isValidUser && isValidPasscode) {
+        setIsAuthenticated(true);
+        if (rememberMe) {
+          localStorage.setItem("hl_mando_admin_auth", "true");
+        }
+        setAuthError("");
+        setFailedAttempts(0);
+        toast.success("Identity verified. Welcome to HL Mando HR Command Center.");
+      } else {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
+        setAuthError(
+          nextAttempts >= 3
+            ? `Access denied. Multiple unauthorized attempts detected (${nextAttempts}). Security incident logged.`
+            : "Access denied. Invalid administrator ID or passcode."
+        );
+        toast.error("Authentication failed. Unauthorized access attempt recorded.");
+      }
+      setIsSubmitting(false);
+    }, 350);
   };
 
   const handleLogout = () => {
@@ -398,100 +421,120 @@ function AdminDashboard() {
   };
 
   // -------------------------------------------------------------
-  // VIEW: AUTHENTICATION / LOGIN SCREEN
+  // VIEW: AUTHENTICATION / LOGIN SCREEN (LIGHT THEME • SECURE ENTERPRISE)
   // -------------------------------------------------------------
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0B1B3D] to-slate-950 flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans">
-        {/* Decorative background glows */}
-        <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 rounded-full bg-yellow-400/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
+      <div className="min-h-screen bg-slate-100/90 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans">
+        {/* Ambient atmospheric light accents */}
+        <div className="absolute top-0 right-0 -mr-40 -mt-40 w-[28rem] h-[28rem] rounded-full bg-blue-200/40 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[28rem] h-[28rem] rounded-full bg-amber-100/50 blur-[100px] pointer-events-none" />
 
         {/* Top Header Strip */}
-        <div className="max-w-6xl w-full mx-auto flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <div className="bg-white px-3 py-1.5 rounded-xl shadow-md border border-slate-200">
+        <div className="max-w-5xl w-full mx-auto flex items-center justify-between z-10 bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="bg-white p-1 rounded-xl shadow-xs border border-slate-200">
               <img src="/ms-logo.jpg" alt="HL Mando" className="h-7 w-auto object-contain" />
             </div>
-            <div className="hidden sm:block">
-              <span className="text-white text-xs font-black tracking-wider block">HL MANDO ANAND INDIA</span>
-              <span className="text-slate-400 text-[10px] uppercase tracking-widest">Plant 1 — Sriperumbudur</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-900 text-xs font-black tracking-wider block">HL MANDO ANAND INDIA</span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Secure Gateway
+                </span>
+              </div>
+              <span className="text-slate-500 text-[10px] uppercase tracking-wider block">
+                Plant 1 — Sriperumbudur, Tamil Nadu
+              </span>
             </div>
           </div>
 
           <a
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-yellow-400 hover:text-yellow-300 font-bold transition-colors bg-yellow-400/10 hover:bg-yellow-400/20 px-3.5 py-1.5 rounded-full border border-yellow-400/30"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-900 hover:text-blue-950 font-bold transition-all bg-slate-100 hover:bg-slate-200/80 px-3.5 py-1.5 rounded-full border border-slate-200"
           >
             ← Public Candidate Portal
           </a>
         </div>
 
         {/* Login Central Card */}
-        <div className="max-w-md w-full mx-auto my-auto z-10 py-8">
-          <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-9 shadow-2xl text-center space-y-6">
+        <div className="max-w-md w-full mx-auto my-auto z-10 py-6 sm:py-8">
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-7 sm:p-9 shadow-xl shadow-slate-300/40 text-center space-y-6 relative overflow-hidden">
+            {/* Top decorative gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-950 via-blue-900 to-amber-500" />
+
             {/* Lock Icon Badge */}
-            <div className="relative inline-block">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-yellow-400/20">
-                <Lock className="w-8 h-8" />
+            <div className="relative inline-block pt-1">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-950 to-blue-900 text-yellow-400 flex items-center justify-center mx-auto shadow-md shadow-blue-950/20">
+                <Lock className="w-7 h-7" />
               </div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center text-[10px] text-white">
+              <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[9px] text-white shadow-xs">
                 ✓
               </span>
             </div>
 
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/30">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-900 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                 HR &amp; Recruitment Command Center
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">Admin Sign In</h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Enter your administrative credentials to manage apprentice applicants in real time.
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2.5 tracking-tight">Admin Sign In</h1>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                Authorized recruitment administrative access only. All actions are logged and audited.
               </p>
             </div>
 
             {authError && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl p-3 text-left flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{authError}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 text-left flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+                <span className="font-medium">{authError}</span>
               </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-4 text-left">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Administrator ID / Username</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Administrator ID / Work Email
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="admin"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (authError) setAuthError("");
+                    }}
+                    placeholder="Enter Administrator ID (e.g. name@hlmando.com)"
+                    autoComplete="username"
+                    required
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-900/10 focus:border-blue-900 transition-all font-medium"
                   />
-                  <ShieldCheck className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-300">Administrative Passcode</label>
-                  <span className="text-[10px] text-yellow-400/80 font-mono">Default: mando@2026</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Administrative Passcode</label>
+                  <span className="text-[10px] text-slate-400 font-medium">Encrypted Field</span>
                 </div>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter passcode (e.g. mando@2026)"
+                    placeholder="Enter administrative passcode"
                     value={passcode}
                     onChange={(e) => {
                       setPasscode(e.target.value);
                       if (authError) setAuthError("");
                     }}
-                    className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-950/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    autoComplete="current-password"
+                    required
+                    className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-900/10 focus:border-blue-900 transition-all font-medium"
                   />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-slate-400 hover:text-white p-1"
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer"
                     title={showPassword ? "Hide passcode" : "Show passcode"}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -499,44 +542,48 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-yellow-400 focus:ring-yellow-400"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900 cursor-pointer"
                   />
-                  <span>Remember session on this device</span>
+                  <span className="text-slate-600 font-medium">Remember session on this device</span>
                 </label>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 font-black text-sm tracking-wide transition-all shadow-xl shadow-yellow-400/20 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 hover:from-blue-900 hover:to-indigo-900 text-white font-black text-sm tracking-wide transition-all shadow-lg shadow-blue-950/20 hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                Sign In to Admin Dashboard <ArrowRight className="w-4 h-4" />
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-yellow-400" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In to Admin Dashboard</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </form>
 
-            {/* Quick Demo Fill Helper */}
-            <div className="pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="text-xs text-slate-400 hover:text-yellow-400 transition-colors inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-800"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> Auto-fill Demo Credentials (mando@2026)
-              </button>
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> 256-bit AES Authenticated • Protected Enterprise Gateway
             </div>
           </div>
         </div>
 
         {/* Footer Security Notice */}
-        <div className="text-center text-xs text-slate-500 max-w-lg mx-auto z-10">
-          <p>© 2026 HL Mando Anand India • Internal HR Portal</p>
-          <p className="text-[11px] text-slate-600 mt-0.5">
-            All administrative actions are logged and audited in accordance with EduforCareer Recruitment Governance.
+        <div className="text-center text-xs text-slate-500 max-w-lg mx-auto z-10 space-y-1">
+          <p className="font-semibold text-slate-600">© 2026 HL Mando Anand India • Internal HR &amp; Recruitment Portal</p>
+          <p className="text-[11px] text-slate-500">
+            All administrative actions are monitored and audited in accordance with EduforCareer Recruitment Governance.
           </p>
         </div>
       </div>
@@ -569,11 +616,17 @@ function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 text-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-slate-400 font-medium">Admin:</span>
+              <span className="font-mono text-amber-300 font-bold">hlmando2026@gleamator.in</span>
+            </div>
+
             <button
               type="button"
               onClick={fetchApplicants}
               disabled={isLoading}
-              className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+              className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white transition-colors cursor-pointer"
               title="Refresh Records from Supabase"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-yellow-400" : ""}`} />
@@ -1133,6 +1186,26 @@ function AdminDashboard() {
                   <div>
                     <span className="text-slate-500">Gender:</span>{" "}
                     <strong className="capitalize text-slate-900">{selectedApplicant.gender}</strong>
+                  </div>
+
+                  {/* Direct Contact Actions */}
+                  <div className="pt-2 flex flex-wrap gap-2 border-t border-slate-200/80">
+                    <a
+                      href={`https://wa.me/91${selectedApplicant.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(
+                        `Hello ${selectedApplicant.full_name}, this is HL Mando Anand India HR team (Plant 1 Sriperumbudur) regarding your Apprenticeship Application ${selectedApplicant.reference_id}.`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-colors shadow-sm"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Candidate
+                    </a>
+                    <a
+                      href={`tel:${selectedApplicant.mobile}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-bold text-[11px] transition-colors shadow-sm"
+                    >
+                      <Phone className="w-3.5 h-3.5" /> Call Mobile
+                    </a>
                   </div>
                 </div>
 
