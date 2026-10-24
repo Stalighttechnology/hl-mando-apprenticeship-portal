@@ -15,6 +15,9 @@ import {
   Lock,
   LogOut,
   ChevronRight,
+  ChevronLeft,
+  ChevronsRight,
+  ChevronsLeft,
   RefreshCw,
   Eye,
   EyeOff,
@@ -83,8 +86,8 @@ interface Applicant {
   created_at: string;
 }
 
-const DEFAULT_ADMIN_USER = "hlmando2026@gleamator.in";
-const DEFAULT_ADMIN_PASSCODE = "admin@hlmando2026";
+const AUTH_ADMIN_USER = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_ADMIN_USER) || "hlmando2026@gleamator.in";
+const AUTH_ADMIN_PASSCODE = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_ADMIN_PASSCODE) || "admin@hlmando2026";
 
 function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -107,6 +110,10 @@ function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [qualificationFilter, setQualificationFilter] = useState("all");
   const [copiedRef, setCopiedRef] = useState<string | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Selected applicant & status update
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
@@ -223,8 +230,12 @@ function AdminDashboard() {
       return;
     }
 
-    const isValidUser = cleanUsername === "hlmando2026@gleamator.in" || cleanUsername === "admin";
-    const isValidPasscode = cleanPasscode === "admin@hlmando2026" || cleanPasscode === "mando@2026";
+    const isValidUser =
+      cleanUsername === AUTH_ADMIN_USER.toLowerCase() ||
+      cleanUsername === "admin";
+    const isValidPasscode =
+      cleanPasscode === AUTH_ADMIN_PASSCODE ||
+      cleanPasscode === "admin@hlmando2026";
 
     setTimeout(() => {
       if (isValidUser && isValidPasscode) {
@@ -232,6 +243,7 @@ function AdminDashboard() {
         if (rememberMe) {
           localStorage.setItem("hl_mando_admin_auth", "true");
         }
+        sessionStorage.setItem("hl_mando_admin_session", "verified");
         setAuthError("");
         setFailedAttempts(0);
         toast.success("Identity verified. Welcome to HL Mando HR Command Center.");
@@ -252,8 +264,11 @@ function AdminDashboard() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem("hl_mando_admin_auth");
+    sessionStorage.removeItem("hl_mando_admin_session");
     setApplicants([]);
-    toast.info("Logged out successfully.");
+    setUsername("");
+    setPasscode("");
+    toast.info("Administrative session ended securely.");
   };
 
   const copyToClipboard = (text: string, e?: React.MouseEvent) => {
@@ -352,6 +367,45 @@ function AdminDashboard() {
       rejected: applicants.filter((a) => a.status === "rejected").length,
     };
   }, [applicants]);
+
+  // Reset pagination when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, qualificationFilter]);
+
+  const totalItems = filteredApplicants.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  // Ensure current page remains valid if data shrinks
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  const paginatedApplicants = useMemo(() => {
+    return filteredApplicants.slice(startIndex, endIndex);
+  }, [filteredApplicants, startIndex, endIndex]);
+
+  // Array of page buttons with ellipses
+  const pageNumbers = useMemo(() => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, 5, "...", totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  }, [currentPage, totalPages]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -594,57 +648,57 @@ function AdminDashboard() {
   // VIEW: MAIN ENTERPRISE ADMIN DASHBOARD
   // -------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans antialiased">
-      {/* Top Enterprise Header */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-950 via-[#0B1B3D] to-slate-950 text-white border-b border-slate-800 shadow-lg">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
+      {/* Top Enterprise Header - Clean Light Corporate Theme */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-white p-1.5 rounded-xl shadow-md border border-slate-200">
+          <div className="flex items-center gap-3.5">
+            <div className="bg-white p-1 rounded-xl shadow-xs border border-slate-200">
               <img src="/ms-logo.jpg" alt="HL Mando" className="h-8 w-auto object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm text-white">Apprenticeship Command Center</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live DB Sync
+                <span className="font-extrabold text-sm text-slate-900 tracking-tight">HL MANDO ANAND INDIA</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live DB Sync
                 </span>
               </div>
-              <span className="text-slate-400 text-xs block">
-                Plant 1 • Sriperumbudur, Tamil Nadu • Drive 2026
+              <span className="text-slate-500 text-xs block font-medium">
+                Apprenticeship Command Center • Plant 1 Sriperumbudur
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 text-xs">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-400 font-medium">Admin:</span>
-              <span className="font-mono text-amber-300 font-bold">hlmando2026@gleamator.in</span>
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-900" />
+              <span className="text-slate-500 font-medium">Session:</span>
+              <span className="text-slate-900 font-bold">HR Administrator</span>
             </div>
 
             <button
               type="button"
               onClick={fetchApplicants}
               disabled={isLoading}
-              className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white transition-colors cursor-pointer"
+              className="p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
               title="Refresh Records from Supabase"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-yellow-400" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-900" : ""}`} />
             </button>
 
             <button
               type="button"
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 hover:from-yellow-300 hover:to-amber-300 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-950 hover:bg-blue-900 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Export Report (CSV)
+              <FileSpreadsheet className="w-4 h-4" /> Export CSV
             </button>
 
             <a
               href="/"
               target="_blank"
               rel="noreferrer"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-colors shadow-xs"
               title="View Public Form"
             >
               <ExternalLink className="w-3.5 h-3.5" /> Portal
@@ -653,7 +707,7 @@ function AdminDashboard() {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100/80 border border-red-200 text-red-700 hover:text-red-800 text-xs font-bold transition-colors shadow-xs cursor-pointer"
             >
               <LogOut className="w-4 h-4" /> Logout
             </button>
@@ -668,93 +722,105 @@ function AdminDashboard() {
           {/* Total */}
           <div
             onClick={() => setStatusFilter("all")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
-              statusFilter === "all" ? "border-blue-900 ring-2 ring-blue-900/20" : "border-slate-200"
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
+              statusFilter === "all" ? "border-blue-900 ring-2 ring-blue-900/15" : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-slate-600 font-bold uppercase tracking-wider">
               <span>Total</span>
-              <Users className="w-4 h-4 text-blue-900" />
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
             </div>
             <div className="text-3xl font-black text-slate-900 mt-2">{metrics.total}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">All applications</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">All applications</div>
           </div>
 
           {/* Under Review */}
           <div
             onClick={() => setStatusFilter("applied")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
-              statusFilter === "applied" ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-200"
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
+              statusFilter === "applied" ? "border-amber-500 ring-2 ring-amber-500/15" : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-amber-700 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-amber-800 font-bold uppercase tracking-wider">
               <span>Pending</span>
-              <Clock className="w-4 h-4 text-amber-600" />
+              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-amber-600 mt-2">{metrics.underReview}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Under screening</div>
+            <div className="text-3xl font-black text-amber-700 mt-2">{metrics.underReview}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Under screening</div>
           </div>
 
           {/* Shortlisted */}
           <div
             onClick={() => setStatusFilter("shortlisted")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
-              statusFilter === "shortlisted" ? "border-blue-600 ring-2 ring-blue-600/20" : "border-slate-200"
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
+              statusFilter === "shortlisted" ? "border-blue-600 ring-2 ring-blue-600/15" : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-blue-700 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-blue-800 font-bold uppercase tracking-wider">
               <span>Shortlisted</span>
-              <UserCheck className="w-4 h-4 text-blue-600" />
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+                <UserCheck className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-blue-600 mt-2">{metrics.shortlisted}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Eligible criteria</div>
+            <div className="text-3xl font-black text-blue-700 mt-2">{metrics.shortlisted}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Eligible criteria</div>
           </div>
 
           {/* Interview */}
           <div
             onClick={() => setStatusFilter("interview_scheduled")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
               statusFilter === "interview_scheduled"
-                ? "border-purple-600 ring-2 ring-purple-600/20"
-                : "border-slate-200"
+                ? "border-purple-600 ring-2 ring-purple-600/15"
+                : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-purple-700 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-purple-800 font-bold uppercase tracking-wider">
               <span>Interview</span>
-              <Calendar className="w-4 h-4 text-purple-600" />
+              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+                <Calendar className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-purple-600 mt-2">{metrics.interview}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Slot allocated</div>
+            <div className="text-3xl font-black text-purple-700 mt-2">{metrics.interview}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Slot allocated</div>
           </div>
 
           {/* Selected */}
           <div
             onClick={() => setStatusFilter("selected")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
-              statusFilter === "selected" ? "border-emerald-600 ring-2 ring-emerald-600/20" : "border-slate-200"
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
+              statusFilter === "selected" ? "border-emerald-600 ring-2 ring-emerald-600/15" : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-emerald-700 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-emerald-800 font-bold uppercase tracking-wider">
               <span>Selected</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-emerald-600 mt-2">{metrics.selected}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Joining confirmed</div>
+            <div className="text-3xl font-black text-emerald-700 mt-2">{metrics.selected}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Joining confirmed</div>
           </div>
 
           {/* Rejected */}
           <div
             onClick={() => setStatusFilter("rejected")}
-            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${
-              statusFilter === "rejected" ? "border-red-600 ring-2 ring-red-600/20" : "border-slate-200"
+            className={`cursor-pointer bg-white rounded-2xl border p-4 shadow-xs hover:shadow-md transition-all ${
+              statusFilter === "rejected" ? "border-red-600 ring-2 ring-red-600/15" : "border-slate-200/90"
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-red-700 font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-red-800 font-bold uppercase tracking-wider">
               <span>Rejected</span>
-              <UserX className="w-4 h-4 text-red-600" />
+              <div className="w-7 h-7 rounded-lg bg-red-50 text-red-700 flex items-center justify-center">
+                <UserX className="w-4 h-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-red-600 mt-2">{metrics.rejected}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Ineligible</div>
+            <div className="text-3xl font-black text-red-700 mt-2">{metrics.rejected}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Ineligible</div>
           </div>
         </div>
 
@@ -817,10 +883,15 @@ function AdminDashboard() {
           </div>
 
           {/* Quick Active Filter Pills */}
-          <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span>Showing:</span>
-              <span className="font-bold text-slate-900">{filteredApplicants.length} applicants</span>
+              <span className="font-bold text-slate-900">
+                {totalItems > 0 ? `${startIndex + 1}–${endIndex} of ${totalItems}` : "0"} applicants
+              </span>
+              <span className="text-slate-400">
+                (Page {currentPage} of {totalPages})
+              </span>
               {statusFilter !== "all" && (
                 <span className="bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">
                   Status: {statusFilter.replace(/_/g, " ")}
@@ -850,10 +921,10 @@ function AdminDashboard() {
         </div>
 
         {/* Applicant Records Table */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-100/80 text-slate-900 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-700 font-extrabold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Ref ID</th>
                   <th className="py-3.5 px-4">Candidate Details</th>
@@ -887,7 +958,7 @@ function AdminDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  filteredApplicants.map((app) => (
+                  paginatedApplicants.map((app) => (
                     <tr
                       key={app.id || app.reference_id}
                       onClick={() => {
@@ -1010,7 +1081,7 @@ function AdminDashboard() {
                       <td className="py-3.5 px-4 text-right">
                         <button
                           type="button"
-                          className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-900 text-slate-700 text-[11px] font-bold transition-all shadow-sm"
+                          className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-900 text-slate-700 text-[11px] font-bold transition-all shadow-xs cursor-pointer"
                         >
                           Dossier →
                         </button>
@@ -1020,6 +1091,126 @@ function AdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls Bar */}
+          <div className="border-t border-slate-200 bg-slate-50/70 px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Left: Summary & Per-page Selector */}
+            <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap justify-center sm:justify-start">
+              <div>
+                Showing{" "}
+                <span className="font-bold text-slate-900">
+                  {totalItems === 0 ? 0 : startIndex + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-bold text-slate-900">
+                  {endIndex}
+                </span>{" "}
+                of{" "}
+                <span className="font-bold text-slate-900">{totalItems}</span> applicants
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label htmlFor="pageSizeSelect" className="text-slate-500 font-medium">
+                  Rows per page:
+                </label>
+                <select
+                  id="pageSizeSelect"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white border border-slate-200 text-slate-700 font-semibold rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-none cursor-pointer shadow-2xs"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right: Page Navigation Buttons */}
+            <div className="flex items-center gap-1.5">
+              {/* First Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1 || totalPages <= 1}
+                title="First Page"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Previous Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || totalPages <= 1}
+                title="Previous Page"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Numbered Page Buttons */}
+              <div className="flex items-center gap-1">
+                {pageNumbers.map((page, index) => {
+                  if (page === "...") {
+                    return (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="w-7 text-center text-slate-400 font-bold text-xs select-none"
+                      >
+                        …
+                      </span>
+                    );
+                  }
+
+                  const pageNum = Number(page);
+                  const isActive = currentPage === pageNum;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-blue-900 text-white shadow-xs"
+                          : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages <= 1}
+                title="Next Page"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages <= 1}
+                title="Last Page"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </main>
